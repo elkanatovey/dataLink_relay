@@ -13,7 +13,6 @@ type ImporterData struct {
 // Exporter is created every time a server reaches out to create a persistent connection. Messages are passed to the
 // handler maintaining the persistent connection via the channel below
 type Exporter struct {
-	wg                     sync.WaitGroup
 	ctx                    context.Context    // context is used to tell whether server connection is still open
 	exporterNotificationCh chan *ImporterData // messages passed to this channel are to be forwarded to the exporter
 }
@@ -23,7 +22,6 @@ func InitExporter(freshCTX context.Context) *Exporter {
 		ctx:                    freshCTX,
 		exporterNotificationCh: make(chan *ImporterData),
 	}
-	exporter.wg.Add(1)
 	return exporter
 }
 
