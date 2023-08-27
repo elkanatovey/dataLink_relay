@@ -58,8 +58,15 @@ func HandleServerLongTermConnection(db *ExporterDB) http.HandlerFunc {
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("Connection", "keep-alive")
 
-		// Get the exporterID from the URL
-		exporterID := r.URL.Query().Get("exporterid")
+		var req ExporterAnnouncement
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		// Get the exporterID
+		exporterID := req.ExporterID
 		if exporterID == "" {
 			http.Error(w, "Please specify an exporter name!", http.StatusInternalServerError)
 			return
@@ -73,7 +80,7 @@ func HandleServerLongTermConnection(db *ExporterDB) http.HandlerFunc {
 			<-r.Context().Done()
 			db.RemoveExporter(exporterID)
 			for connectionRequest := range connectionRequests.exporterNotificationCh {
-				connectionRequest.resultNotificationCh <- "failed"
+				connectionRequest.resultNotificationCh <- Result{"failed", nil}
 			}
 
 		}()
@@ -85,13 +92,13 @@ func HandleServerLongTermConnection(db *ExporterDB) http.HandlerFunc {
 			event, err := formatServerSentEvent("connection-request", connectionRequest)
 			if err != nil {
 				fmt.Println(err)
-				break
+				connectionRequest.resultNotificationCh <- Result{"failed", err}
 			}
 
 			_, err = fmt.Fprint(w, event)
 			if err != nil {
 				fmt.Println(err)
-				break
+				connectionRequest.resultNotificationCh <- Result{"failed", err}
 			}
 
 			flusher.Flush()
