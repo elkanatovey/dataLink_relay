@@ -26,9 +26,10 @@ const ServerPort = 3333
 // Responsibilities: start listener for servers, start listeners for clients
 func StartRelay() {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/serverconn", HandleServerLongTermConnection)     //listen
-	mux.HandleFunc("/clientconn", HandleClientConnection)             //call
-	mux.HandleFunc("/servercallback", HandleServerCallBackConnection) //accept
+	exportersServed := InitExporterDB()
+	mux.HandleFunc("/serverconn", HandleServerLongTermConnection(exportersServed)) //listen
+	mux.HandleFunc("/clientconn", HandleClientConnection)                          //call
+	mux.HandleFunc("/servercallback", HandleServerCallBackConnection)              //accept
 
 	server := http.Server{
 		Addr:    fmt.Sprintf(":%d", ServerPort),
@@ -42,38 +43,63 @@ func StartRelay() {
 }
 
 // under construction
-func HandleServerLongTermConnection(w http.ResponseWriter, r *http.Request) {
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		http.Error(w, "SSE not supported", http.StatusInternalServerError)
-		return
-	}
+func HandleServerLongTermConnection(db *ExporterDB) http.HandlerFunc {
 
-	fmt.Println("server connected to relay...")
-
-	w.Header().Set("Content-Type", "text/event-stream")
-
-	conReqCh := make(chan string)
-
-	// @todo put channel + r.Context in db that client conns can access
-
-	for connectionRequest := range conReqCh {
-		event, err := formatServerSentEvent("connection-request", connectionRequest)
-		if err != nil {
-			fmt.Println(err)
-			break
+	return func(w http.ResponseWriter, r *http.Request) {
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			http.Error(w, "SSE not supported", http.StatusInternalServerError)
+			return
 		}
 
-		_, err = fmt.Fprint(w, event)
-		if err != nil {
-			fmt.Println(err)
-			break
+		fmt.Println("server connected to relay...")
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+
+		// Get the exporterID from the URL
+		exporterID := r.URL.Query().Get("exporterid")
+		if exporterID == "" {
+			http.Error(w, "Please specify an exporter name!", http.StatusInternalServerError)
+			return
 		}
 
+		//allow importers to request this service
+		connectionRequests := InitExporter(r.Context())
+		db.AddExporter(exporterID, connectionRequests) //@todo define api for server requests
+
+		go func() {
+			<-r.Context().Done()
+			db.RemoveExporter(exporterID)
+			for connectionRequest := range connectionRequests.exporterNotificationCh {
+				connectionRequest.resultNotificationCh <- "failed"
+			}
+
+		}()
+
+		w.WriteHeader(http.StatusOK)
 		flusher.Flush()
-	}
 
-	fmt.Printf("server: %s /\n", r.Method)
+		for connectionRequest := range connectionRequests.exporterNotificationCh {
+			event, err := formatServerSentEvent("connection-request", connectionRequest)
+			if err != nil {
+				fmt.Println(err)
+				break
+			}
+
+			_, err = fmt.Fprint(w, event)
+			if err != nil {
+				fmt.Println(err)
+				break
+			}
+
+			flusher.Flush()
+		}
+
+		fmt.Printf("server: %s /\n", r.Method)
+
+	}
 }
 
 // formatServerSentEvent takes name of an event and any kind of data and transforms
