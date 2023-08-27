@@ -5,9 +5,14 @@ import (
 	"sync"
 )
 
+type Result struct {
+	Message string
+	Error   error
+}
+
 type ImporterData struct {
 	msg                  string      // message for exporter
-	resultNotificationCh chan string // report to importer routine if message was passed to exporter socket successfully @todo should this be bool?
+	resultNotificationCh chan Result // report to importer routine if message was passed to exporter socket successfully @todo should this be bool?
 }
 
 // Exporter is created every time a server reaches out to create a persistent connection. Messages are passed to the
