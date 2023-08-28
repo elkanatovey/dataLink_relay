@@ -10,6 +10,14 @@ type ImporterData struct {
 	resultNotificationCh chan ExporterResponse // report to importer routine if message was passed to exporter socket successfully @todo should this be bool?
 }
 
+func InitImporterData(cr ConnectionRequest) *ImporterData {
+	importer := &ImporterData{
+		msg:                  cr,
+		resultNotificationCh: make(chan ExporterResponse),
+	}
+	return importer
+}
+
 // Exporter is created every time a server reaches out to create a persistent connection. Messages are passed to the
 // handler maintaining the persistent connection via the channel below
 type Exporter struct {

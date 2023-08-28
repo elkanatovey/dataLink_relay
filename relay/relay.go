@@ -12,12 +12,10 @@
 package relay
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 )
 
 const ServerPort = 3333
