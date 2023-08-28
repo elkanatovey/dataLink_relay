@@ -109,40 +109,6 @@ func HandleServerLongTermConnection(db *ExporterDB) http.HandlerFunc {
 	}
 }
 
-// formatServerSentEvent takes name of an event and any kind of data and transforms
-// into a server sent event payload structure.
-// Data is sent as a json object, { "data": <your_data> }.
-//
-// Example:
-//
-//	Input:
-//		event="connection-request"
-//		data=servicefoo
-//	Output:
-//		event: connection-request\n
-//		data: "{\"data\":servicefoo}"\n\n
-func formatServerSentEvent(event string, data any) (string, error) {
-	m := map[string]any{
-		"data": data,
-	}
-
-	buff := bytes.NewBuffer([]byte{})
-
-	encoder := json.NewEncoder(buff)
-
-	err := encoder.Encode(m)
-	if err != nil {
-		return "", err
-	}
-
-	sb := strings.Builder{}
-
-	sb.WriteString(fmt.Sprintf("event: %s\n", event))
-	sb.WriteString(fmt.Sprintf("data: %v\n\n", buff.String()))
-
-	return sb.String(), nil
-}
-
 func HandleClientConnection(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("client: %s /\n", r.Method)
 }
