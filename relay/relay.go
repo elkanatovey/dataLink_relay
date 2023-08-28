@@ -80,7 +80,7 @@ func HandleServerLongTermConnection(db *ExporterDB) http.HandlerFunc {
 			<-r.Context().Done()
 			db.RemoveExporter(exporterID)
 			for connectionRequest := range connectionRequests.exporterNotificationCh {
-				connectionRequest.resultNotificationCh <- Result{"failed", nil}
+				connectionRequest.resultNotificationCh <- ExporterResponse{"failed", nil}
 			}
 
 		}()
@@ -88,17 +88,17 @@ func HandleServerLongTermConnection(db *ExporterDB) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 		flusher.Flush()
 
-		for connectionRequest := range connectionRequests.exporterNotificationCh {
-			event, err := formatServerSentEvent("connection-request", connectionRequest)
+		for importer := range connectionRequests.exporterNotificationCh {
+			event, err := MarshalToSSEEvent(importer.msg)
 			if err != nil {
 				fmt.Println(err)
-				connectionRequest.resultNotificationCh <- Result{"failed", err}
+				importer.resultNotificationCh <- ExporterResponse{"failed", err}
 			}
 
 			_, err = fmt.Fprint(w, event)
 			if err != nil {
 				fmt.Println(err)
-				connectionRequest.resultNotificationCh <- Result{"failed", err}
+				importer.resultNotificationCh <- ExporterResponse{"failed", err}
 			}
 
 			flusher.Flush()
