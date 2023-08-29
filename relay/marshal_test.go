@@ -11,15 +11,15 @@ func TestMarshalAndUnmarshal(t *testing.T) {
 		ExporterID: "456",
 	}
 
-	// Test MarshalJSON
-	marshaledData, err := connReq.MarshalJSON()
+	// Test ToJSON
+	marshaledData, err := connReq.ToJSON()
 	if err != nil {
 		t.Errorf("Error marshaling: %v", err)
 	}
 
-	// Test UnmarshalJSON
+	// Test FromJSON
 	var unmarshaledConnReq ConnectionRequest
-	err = unmarshaledConnReq.UnmarshalJSON(marshaledData)
+	err = unmarshaledConnReq.FromJSON(marshaledData)
 	if err != nil {
 		t.Errorf("Error unmarshaling: %v", err)
 	}

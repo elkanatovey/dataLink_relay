@@ -6,33 +6,12 @@ import (
 	"strings"
 )
 
-func (cr *ConnectionRequest) MarshalJSON() ([]byte, error) {
-	return json.Marshal(&struct {
-		Data       string `json:"Data"`
-		ImporterID string `json:"ImporterID"`
-		ExporterID string `json:"ExporterID"`
-	}{
-		Data:       cr.Data,
-		ImporterID: cr.ImporterID,
-		ExporterID: cr.ExporterID,
-	})
+func (cr *ConnectionRequest) ToJSON() ([]byte, error) {
+	return json.Marshal(cr)
 }
 
-func (cr *ConnectionRequest) UnmarshalJSON(data []byte) error {
-	var aux = &struct {
-		Data       string `json:"Data"`
-		ImporterID string `json:"ImporterID"`
-		ExporterID string `json:"ExporterID"`
-	}{}
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return err
-	}
-
-	cr.Data = aux.Data
-	cr.ImporterID = aux.ImporterID
-	cr.ExporterID = aux.ExporterID
-
-	return nil
+func (cr *ConnectionRequest) FromJSON(data []byte) error {
+	return json.Unmarshal(data, cr)
 }
 
 func MarshalToSSEEvent(connReq ConnectionRequest) (string, error) {
