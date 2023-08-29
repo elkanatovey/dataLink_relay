@@ -40,9 +40,7 @@ func TestHandleServerLongTermConnection(t *testing.T) {
 	mockDB := InitExporterDB()
 	handler := HandleServerLongTermConnection(mockDB)
 
-	reqBody := map[string]interface{}{
-		"ExporterID": "123",
-	}
+	reqBody := ExporterAnnouncement{ExporterID: "123"}
 
 	reqBodyBytes, _ := json.Marshal(reqBody)
 

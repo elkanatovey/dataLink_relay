@@ -1,10 +1,13 @@
 package relay
 
+//This file contains entities that are managed within the relay
+
 import (
 	"context"
 	"sync"
 )
 
+// ImporterData contains a message for an exporter and channel for communicating back to the respective importer
 type ImporterData struct {
 	msg                  ConnectionRequest     // message for exporter
 	resultNotificationCh chan ExporterResponse // report to importer routine if message was passed to exporter socket successfully @todo should this be bool?
