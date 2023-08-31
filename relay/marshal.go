@@ -20,7 +20,7 @@ func MarshalToSSEEvent(connReq ConnectionRequest) (string, error) {
 		return "json marshalling unsuccessful", err
 	}
 
-	event := fmt.Sprintf("event: connection\nid: %s\ndata: %s\n\n", connReq.ImporterID, data)
+	event := fmt.Sprintf("event: connection\ndata: %s\n\n", data)
 	return event, nil
 }
 
@@ -36,7 +36,6 @@ func UnmarshalFromSSEEvent(sseEvent string) (ConnectionRequest, error) {
 	// Extract the JSON data
 	jsonData := sseEvent[dataStart+len("\ndata:"):]
 	jsonData = strings.TrimSpace(jsonData)
-
 	// Unmarshal the JSON data into the struct
 	err := json.Unmarshal([]byte(jsonData), &connReq)
 	if err != nil {

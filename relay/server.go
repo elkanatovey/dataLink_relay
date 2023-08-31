@@ -1,20 +1,50 @@
 package relay
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 )
 
 // server exports services via relay
 type ExportingServer struct {
 	Connection *http.Client
-	URL        string
+	URL        string // address of relay
 	ExporterID string
 }
 
-func (s *ExportingServer) AdvertiseService() error {
+func (s *ExportingServer) AdvertiseService(ctx context.Context) error {
+
+	req, err := s.request(ctx)
+	if err != nil {
+		return err
+	}
+	defer req.Body.Close()
+
+	switch req.StatusCode {
+	case http.StatusOK:
+		// we do not support BOM in sse streams, or \r line separators.
+		r := bufio.NewReader(req.Body)
+		for {
+			event, err := s.parseEvent(r)
+			if err != nil {
+				return err
+			}
+
+			if err := handle(event); err != nil {
+				return err
+			}
+		}
+	case http.StatusInternalServerError, http.StatusBadGateway, http.StatusServiceUnavailable, http.StatusGatewayTimeout:
+		connectionhandel
+	default:
+		// trigger a reconnect and output an error.
+		return fmt.Errorf("bad response status code %d", req.StatusCode)
+	}
+
 	return nil
 }
 
