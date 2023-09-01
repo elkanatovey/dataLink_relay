@@ -11,38 +11,28 @@ import (
 
 // server exports services via relay
 type ExportingServer struct {
-	Connection *http.Client
-	URL        string // address of relay
-	ExporterID string
+	Connection    *http.Client
+	URL           string // address of relay
+	ExporterID    string
+	maxBufferSize int
 }
 
 func (s *ExportingServer) AdvertiseService(ctx context.Context) error {
 
-	req, err := s.request(ctx)
+	resp, err := s.request(ctx)
 	if err != nil {
 		return err
 	}
-	defer req.Body.Close()
+	defer resp.Body.Close()
 
-	switch req.StatusCode {
-	case http.StatusOK:
-		// we do not support BOM in sse streams, or \r line separators.
-		r := bufio.NewReader(req.Body)
-		for {
-			event, err := s.parseEvent(r)
-			if err != nil {
-				return err
-			}
-
-			if err := handle(event); err != nil {
-				return err
-			}
-		}
-	case http.StatusInternalServerError, http.StatusBadGateway, http.StatusServiceUnavailable, http.StatusGatewayTimeout:
-		connectionhandel
-	default:
-		// trigger a reconnect and output an error.
-		return fmt.Errorf("bad response status code %d", req.StatusCode)
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("could not connect to stream: %s", http.StatusText(resp.StatusCode))
+	}
+	reader := NewEventStreamReader(resp.Body, s.maxBufferSize)
+	for {
+		event, err := reader.ReadEvent()
+		unmarshaled, err := UnmarshalFromSSEEvent(string(event[:]))
+		//sendoff to be handled
 	}
 
 	return nil

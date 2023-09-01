@@ -81,7 +81,7 @@ func TestHandleServerLongTermConnection(t *testing.T) {
 	if err != nil {
 		return
 	}
-	// Wait for a short time to ensure the handler handles the sent message
+	// Wait for a short time to ensure the handler handles the message sent
 	time.Sleep(100 * time.Millisecond)
 	event, _ := MarshalToSSEEvent(connReq)
 
