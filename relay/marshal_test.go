@@ -40,7 +40,7 @@ func TestMarshalToSSEEvent(t *testing.T) {
 	}
 
 	// Test MarshalToSSEEvent
-	sseEvent, err := MarshalToSSEEvent(connReq)
+	sseEvent, err := MarshalToSSEEvent(&connReq)
 	if err != nil {
 		t.Errorf("Error marshaling to SSE event: %v", err)
 	}
@@ -60,12 +60,12 @@ func TestUnmarshalFromSSEEvent(t *testing.T) {
 		t.Errorf("Error unmarshaling from SSE event: %v", err)
 	}
 
-	expectedConnReq := ConnectionRequest{
+	expectedConnReq := &ConnectionRequest{
 		Data:       "Some data",
 		ImporterID: "123",
 		ExporterID: "456",
 	}
-	if connReq != expectedConnReq {
+	if *connReq != *expectedConnReq {
 		t.Errorf("Unexpected ConnectionRequest:\nExpected: %+v\nActual:   %+v", expectedConnReq, connReq)
 	}
 }

@@ -1,5 +1,7 @@
 package relay
 
+// This code deals with reading ConnectionRequests at the server from a buffered stream
+
 import (
 	"bufio"
 	"bytes"
@@ -44,10 +46,11 @@ func NewEventStreamReader(eventStream io.Reader, maxBufferSize int) *EventStream
 }
 
 // ReadEvent scans the EventStream for events.
-func (e *EventStreamReader) ReadEvent() ([]byte, error) {
+func (e *EventStreamReader) ReadEvent() (*ConnectionRequest, error) {
 	if e.scanner.Scan() {
 		event := e.scanner.Bytes()
-		return event, nil
+		unmarshalled, err := UnmarshalFromSSEEvent(string(event[:]))
+		return unmarshalled, err
 	}
 	if err := e.scanner.Err(); err != nil {
 		if errors.Is(err, context.Canceled) {

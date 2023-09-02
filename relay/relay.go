@@ -18,16 +18,28 @@ import (
 	"net/http"
 )
 
+// Relay contains data for running relay code
+type Relay struct {
+	activeExporters *ExporterDB
+	mux             http.Handler
+}
+
+func NewRelay() *Relay {
+	exp := InitExporterDB()
+	mux := registerHandlers(exp)
+	return &Relay{
+		activeExporters: exp,
+		mux:             mux,
+	}
+}
+
 const ServerPort = 3333
 
 // StartRelay starts the main relay function.
 // Responsibilities: start listener for servers, start listeners for clients
 func StartRelay() {
-	mux := http.NewServeMux()
 	exportersServed := InitExporterDB()
-	mux.HandleFunc("/serverconn", HandleServerLongTermConnection(exportersServed)) //listen
-	mux.HandleFunc("/clientconn", HandleClientConnection)                          //call
-	mux.HandleFunc("/servercallback", HandleServerCallBackConnection)              //accept
+	mux := registerHandlers(exportersServed)
 
 	server := http.Server{
 		Addr:    fmt.Sprintf(":%d", ServerPort),
@@ -38,6 +50,15 @@ func StartRelay() {
 			fmt.Printf("error running http server: %s\n", err)
 		}
 	}
+}
+
+func registerHandlers(db *ExporterDB) *http.ServeMux {
+	mux := http.NewServeMux()
+	exportersServed := InitExporterDB()
+	mux.HandleFunc("/serverconn", HandleServerLongTermConnection(exportersServed)) //listen
+	mux.HandleFunc("/clientconn", HandleClientConnection)                          //call
+	mux.HandleFunc("/servercallback", HandleServerCallBackConnection)              //accept
+	return mux
 }
 
 // under construction
@@ -70,7 +91,7 @@ func HandleServerLongTermConnection(db *ExporterDB) http.HandlerFunc {
 			return
 		}
 
-		//allow importers to request this service
+		//allow importers to listenRequest this service
 		connectionRequests := InitExporter(r.Context())
 		db.AddExporter(exporterID, connectionRequests) //@todo define api for server requests
 
@@ -87,7 +108,7 @@ func HandleServerLongTermConnection(db *ExporterDB) http.HandlerFunc {
 		flusher.Flush()
 
 		for importer := range connectionRequests.exporterNotificationCh {
-			event, err := MarshalToSSEEvent(importer.msg)
+			event, err := MarshalToSSEEvent(&importer.msg)
 			if err != nil {
 				fmt.Println(err)
 				importer.resultNotificationCh <- ExporterResponse{"failed", err}
@@ -112,6 +133,10 @@ func HandleClientConnection(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleServerCallBackConnection(w http.ResponseWriter, r *http.Request) {
+	//get client id
+	//get socket from db according to id
+	//connect sockets
+
 	fmt.Printf("servercallback: %s /\n", r.Method)
 }
 

@@ -83,7 +83,7 @@ func TestHandleServerLongTermConnection(t *testing.T) {
 	}
 	// Wait for a short time to ensure the handler handles the message sent
 	time.Sleep(100 * time.Millisecond)
-	event, _ := MarshalToSSEEvent(connReq)
+	event, _ := MarshalToSSEEvent(&connReq)
 
 	// Check the response body contains the expected SSE event
 	if rr.Body.String() != event {

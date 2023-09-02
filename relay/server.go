@@ -1,7 +1,6 @@
 package relay
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -12,14 +11,34 @@ import (
 // server exports services via relay
 type ExportingServer struct {
 	Connection    *http.Client
-	URL           string // address of relay
+	RelayURL      string // address of relay
 	ExporterID    string
 	maxBufferSize int
 }
 
-func (s *ExportingServer) AdvertiseService(ctx context.Context) error {
+// NewExportingServer creates a new ExportingServer
+func NewExportingServer(url string, id string, opts ...func(c *ExportingServer)) *ExportingServer {
+	s := &ExportingServer{
+		RelayURL:      url,
+		ExporterID:    id,
+		Connection:    &http.Client{},
+		maxBufferSize: 1 << 16,
+	}
 
-	resp, err := s.request(ctx)
+	for _, opt := range opts {
+		opt(s)
+	}
+
+	return s
+}
+
+func (s *ExportingServer) AcceptConnection(ctx context.Context, cr *ConnectionRequest) error {
+	return nil
+}
+
+// AdvertiseService maintains the persistent connection through which clients send connection requests
+func (s *ExportingServer) AdvertiseService(ctx context.Context, handlingCH chan *ConnectionRequest) error {
+	resp, err := s.listenRequest(ctx)
 	if err != nil {
 		return err
 	}
@@ -30,29 +49,38 @@ func (s *ExportingServer) AdvertiseService(ctx context.Context) error {
 	}
 	reader := NewEventStreamReader(resp.Body, s.maxBufferSize)
 	for {
-		event, err := reader.ReadEvent()
-		unmarshaled, err := UnmarshalFromSSEEvent(string(event[:]))
-		//sendoff to be handled
+		select {
+		case <-ctx.Done():
+			return nil //should handlingCH be closed here?
+		default:
+			event, err := reader.ReadEvent()
+			if err != nil {
+				//send off to be handled
+				return err
+			}
+			//sendoff to be handled
+			handlingCH <- event
+		}
+
 	}
 
-	return nil
 }
 
-// request opens the connection to the relay
-func (s *ExportingServer) request(ctx context.Context) (*http.Response, error) {
+// listenRequest opens the connection to the relay
+func (s *ExportingServer) listenRequest(ctx context.Context) (*http.Response, error) {
 
-	req, err := s.createRequest(ctx)
+	req, err := s.createListenRequest(ctx)
 	if err != nil {
 		return nil, err
 	}
 	return s.Connection.Do(req)
 }
 
-func (s *ExportingServer) createRequest(ctx context.Context) (*http.Request, error) {
+func (s *ExportingServer) createListenRequest(ctx context.Context) (*http.Request, error) {
 	reqBody := ExporterAnnouncement{ExporterID: s.ExporterID}
 	reqBodyBytes, _ := json.Marshal(reqBody)
 
-	req, err := http.NewRequest("POST", s.URL, bytes.NewReader(reqBodyBytes))
+	req, err := http.NewRequest("POST", s.RelayURL, bytes.NewReader(reqBodyBytes))
 	if err != nil {
 		return nil, err
 	}

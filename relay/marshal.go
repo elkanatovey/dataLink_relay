@@ -1,5 +1,7 @@
 package relay
 
+// Marshaling functions related to ConnectionRequests
+
 import (
 	"encoding/json"
 	"fmt"
@@ -14,7 +16,7 @@ func (cr *ConnectionRequest) FromJSON(data []byte) error {
 	return json.Unmarshal(data, cr)
 }
 
-func MarshalToSSEEvent(connReq ConnectionRequest) (string, error) {
+func MarshalToSSEEvent(connReq *ConnectionRequest) (string, error) {
 	data, err := json.Marshal(connReq)
 	if err != nil {
 		return "json marshalling unsuccessful", err
@@ -24,13 +26,13 @@ func MarshalToSSEEvent(connReq ConnectionRequest) (string, error) {
 	return event, nil
 }
 
-func UnmarshalFromSSEEvent(sseEvent string) (ConnectionRequest, error) {
+func UnmarshalFromSSEEvent(sseEvent string) (*ConnectionRequest, error) {
 	var connReq ConnectionRequest
 
 	// Find the start of the JSON data in the SSE event
 	dataStart := strings.Index(sseEvent, "\ndata:")
 	if dataStart == -1 {
-		return connReq, fmt.Errorf("no data field found in SSE event")
+		return nil, fmt.Errorf("no data field found in SSE event")
 	}
 
 	// Extract the JSON data
@@ -39,8 +41,8 @@ func UnmarshalFromSSEEvent(sseEvent string) (ConnectionRequest, error) {
 	// Unmarshal the JSON data into the struct
 	err := json.Unmarshal([]byte(jsonData), &connReq)
 	if err != nil {
-		return connReq, err
+		return nil, err
 	}
 
-	return connReq, nil
+	return &connReq, nil
 }
