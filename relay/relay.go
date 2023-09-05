@@ -52,11 +52,10 @@ func StartRelay() {
 	}
 }
 
-func registerHandlers(db *ExporterDB) *http.ServeMux {
+func registerHandlers(exportersServed *ExporterDB) *http.ServeMux {
 	mux := http.NewServeMux()
-	exportersServed := InitExporterDB()
 	mux.HandleFunc("/serverconn", HandleServerLongTermConnection(exportersServed)) //listen
-	mux.HandleFunc("/clientconn", HandleClientConnection)                          //call
+	mux.HandleFunc("/clientconn", HandleClientConnection(exportersServed))         //call
 	mux.HandleFunc("/servercallback", HandleServerCallBackConnection)              //accept
 	return mux
 }
@@ -99,7 +98,7 @@ func HandleServerLongTermConnection(db *ExporterDB) http.HandlerFunc {
 			<-r.Context().Done()
 			db.RemoveExporter(exporterID)
 			for connectionRequest := range connectionRequests.exporterNotificationCh {
-				connectionRequest.resultNotificationCh <- ExporterResponse{"failed", nil}
+				connectionRequest.resultNotificationCh <- ExporterResponse{NoteServerConnLost, nil}
 			}
 
 		}()
@@ -111,16 +110,17 @@ func HandleServerLongTermConnection(db *ExporterDB) http.HandlerFunc {
 			event, err := MarshalToSSEEvent(&importer.msg)
 			if err != nil {
 				fmt.Println(err)
-				importer.resultNotificationCh <- ExporterResponse{"failed", err}
+				importer.resultNotificationCh <- ExporterResponse{NoteFail, err}
 			}
 
 			_, err = fmt.Fprint(w, event)
 			if err != nil {
 				fmt.Println(err)
-				importer.resultNotificationCh <- ExporterResponse{"failed", err}
+				importer.resultNotificationCh <- ExporterResponse{NoteFail, err}
 			}
 
 			flusher.Flush()
+			importer.resultNotificationCh <- ExporterResponse{NotePassed, nil}
 		}
 
 		fmt.Printf("server: %s /\n", r.Method)
@@ -128,8 +128,32 @@ func HandleServerLongTermConnection(db *ExporterDB) http.HandlerFunc {
 	}
 }
 
-func HandleClientConnection(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("client: %s /\n", r.Method)
+func HandleClientConnection(db *ExporterDB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var cr ConnectionRequest
+		err := json.NewDecoder(r.Body).Decode(&cr)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		imd := InitImporterData(cr)
+
+		err = db.NotifyExporter(cr.ExporterID, imd)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		var res = <-imd.resultNotificationCh
+		if res.Message != NotePassed {
+			http.Error(w, res.Error.Error(), http.StatusBadRequest)
+			return
+		}
+		//hijack connection
+		//wait for callback
+		//create data that can be connected to
+	}
 }
 
 func HandleServerCallBackConnection(w http.ResponseWriter, r *http.Request) {

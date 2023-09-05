@@ -33,6 +33,10 @@ func NewExportingServer(url string, id string, opts ...func(c *ExportingServer))
 }
 
 func (s *ExportingServer) AcceptConnection(ctx context.Context, cr *ConnectionRequest) error {
+	//create request
+	//run request
+	// capture socket and pass back
+
 	return nil
 }
 

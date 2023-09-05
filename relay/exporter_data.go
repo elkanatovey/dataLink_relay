@@ -4,6 +4,7 @@ package relay
 
 import (
 	"context"
+	"errors"
 	"sync"
 )
 
@@ -63,9 +64,14 @@ func (db *ExporterDB) RemoveExporter(id string) {
 	db.mx.Unlock()
 }
 
+// NotifyExporter return an error if the server to access does not exist in the db nil otherwise
 func (db *ExporterDB) NotifyExporter(id string, msg *ImporterData) error {
 	db.mx.RLock()
 	defer db.mx.RUnlock()
-	db.exporters[id].exporterNotificationCh <- msg
-	return nil //@todo handle nonexistent member
+	if exporter, ok := db.exporters[id]; ok {
+		exporter.exporterNotificationCh <- msg
+		return nil
+	}
+	var ErrNotFound = errors.New("Server was not found")
+	return ErrNotFound
 }

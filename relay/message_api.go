@@ -15,6 +15,15 @@ type ExporterAnnouncement struct {
 
 // ExporterResponse informs whether a ConnectionRequest was passed on successfully
 type ExporterResponse struct {
-	Message string
+	Message Notification
 	Error   error
 }
+
+type Notification string
+
+const (
+	NotePassed         Notification = "connection request passed to server" //success
+	NoteServerConnLost Notification = "connection request failed server disconnected"
+	NoteServerNoExist  Notification = "server requested not registered with relay"
+	NoteFail           Notification = "connection request failed" // generic fail
+)
