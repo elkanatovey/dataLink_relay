@@ -1,5 +1,5 @@
-# Multi-cloud Border Gateway(MBG) relay implementation
-The mcb relay allows importers and exporters of services to communicate over mtls even when both the expoerter and importer of a service are behind a firewall.
+# Clusterlink relay implementation
+The Clusterlink relay allows two clusterlink gateways to communicate over mtls even when both the gateways are in their private networks behind a firewall.
 
 ### General workflow:
 
