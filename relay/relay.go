@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 )
 
@@ -98,7 +99,7 @@ func HandleServerLongTermConnection(db *ExporterDB) http.HandlerFunc {
 			<-r.Context().Done()
 			db.RemoveExporter(exporterID)
 			for connectionRequest := range connectionRequests.exporterNotificationCh {
-				connectionRequest.resultNotificationCh <- ExporterResponse{NoteServerConnLost, nil}
+				connectionRequest.resultNotificationCh <- ForwardingSuccessNotification{NoteServerConnLost, nil}
 			}
 
 		}()
@@ -110,17 +111,17 @@ func HandleServerLongTermConnection(db *ExporterDB) http.HandlerFunc {
 			event, err := MarshalToSSEEvent(&importer.msg)
 			if err != nil {
 				fmt.Println(err)
-				importer.resultNotificationCh <- ExporterResponse{NoteFail, err}
+				importer.resultNotificationCh <- ForwardingSuccessNotification{NoteFail, err}
 			}
 
 			_, err = fmt.Fprint(w, event)
 			if err != nil {
 				fmt.Println(err)
-				importer.resultNotificationCh <- ExporterResponse{NoteFail, err}
+				importer.resultNotificationCh <- ForwardingSuccessNotification{NoteFail, err}
 			}
 
 			flusher.Flush()
-			importer.resultNotificationCh <- ExporterResponse{NotePassed, nil}
+			importer.resultNotificationCh <- ForwardingSuccessNotification{NotePassed, nil}
 		}
 
 		fmt.Printf("server: %s /\n", r.Method)
@@ -151,9 +152,27 @@ func HandleClientConnection(db *ExporterDB) http.HandlerFunc {
 			return
 		}
 		//hijack connection
+		conn := hijackConn(w)
+		if conn == nil {
+			return
+		}
 		//wait for callback
 		//create data that can be connected to
 	}
+}
+
+// Hijack the HTTP connection and use the TCP session
+func hijackConn(w http.ResponseWriter) net.Conn {
+	// Check if we can hijack connection
+	hj, ok := w.(http.Hijacker)
+	if !ok {
+		http.Error(w, "server doesn't support hijacking", http.StatusInternalServerError)
+		return nil
+	}
+	w.WriteHeader(http.StatusOK) //should this be here?
+	// Hijack the connection
+	conn, _, _ := hj.Hijack()
+	return conn
 }
 
 func HandleServerCallBackConnection(w http.ResponseWriter, r *http.Request) {

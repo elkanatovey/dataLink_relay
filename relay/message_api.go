@@ -7,14 +7,21 @@ type ConnectionRequest struct {
 	ExporterID string `json:"ExporterID"`
 }
 
+// ConnectionAccept is sent by an exporter to an importer
+type ConnectionAccept struct {
+	Data       string `json:"Data"`
+	ImporterID string `json:"ImporterID"`
+	ExporterID string `json:"ExporterID"`
+}
+
 // ExporterAnnouncement is sent by an exporter opening a persistent connection to a relay
 type ExporterAnnouncement struct {
 	Data       string `json:"Data"`
 	ExporterID string `json:"ExporterID"`
 }
 
-// ExporterResponse informs whether a ConnectionRequest was passed on successfully
-type ExporterResponse struct {
+// ForwardingSuccessNotification informs whether a ConnectionRequest was passed on successfully to the listening exporter by the relay
+type ForwardingSuccessNotification struct {
 	Message Notification
 	Error   error
 }
