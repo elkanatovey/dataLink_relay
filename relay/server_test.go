@@ -15,7 +15,7 @@ func TestExportingServer_AdvertiseService(t *testing.T) {
 	r := NewRelay()
 	relayServer = httptest.NewServer(r.mux)
 
-	exportingServer := NewExportingServer(relayServer.URL+"/serverconn", "foobar")
+	exportingServer := NewExportingServer(relayServer.URL, "foobar")
 
 	handlingChennel := make(chan *ConnectionRequest)
 	ctx, _ := context.WithCancel(context.Background()) // need to add  sse events to server to send + spin up gouroutine for export logic

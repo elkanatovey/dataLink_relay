@@ -34,3 +34,10 @@ const (
 	NoteServerNoExist  Notification = "server requested not registered with relay"
 	NoteFail           Notification = "connection request failed" // generic fail
 )
+
+// handles for our api
+const (
+	Dial   string = "/clientconn"
+	Listen string = "/serverconn"
+	Accept string = "/servercallback"
+)

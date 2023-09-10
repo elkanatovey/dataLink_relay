@@ -55,9 +55,9 @@ func StartRelay() {
 
 func registerHandlers(exportersServed *ExporterDB) *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/serverconn", HandleServerLongTermConnection(exportersServed)) //listen
-	mux.HandleFunc("/clientconn", HandleClientConnection(exportersServed))         //call
-	mux.HandleFunc("/servercallback", HandleServerCallBackConnection)              //accept
+	mux.HandleFunc(Listen, HandleServerLongTermConnection(exportersServed)) //listen
+	mux.HandleFunc(Dial, HandleClientConnection(exportersServed))           //call
+	mux.HandleFunc(Accept, HandleServerCallBackConnection)                  //accept
 	return mux
 }
 

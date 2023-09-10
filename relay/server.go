@@ -5,10 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 )
 
-// server exports services via relay
+// ExportingServer exports services via relay
 type ExportingServer struct {
 	Connection    *http.Client
 	RelayURL      string // address of relay
@@ -32,12 +33,14 @@ func NewExportingServer(url string, id string, opts ...func(c *ExportingServer))
 	return s
 }
 
-func (s *ExportingServer) AcceptConnection(ctx context.Context, cr *ConnectionRequest) error {
+func (s *ExportingServer) AcceptConnection(ctx context.Context, cr *ConnectionRequest) (net.Conn, error) {
+
 	//create request
+
 	//run request
 	// capture socket and pass back
 
-	return nil
+	return nil, nil
 }
 
 // AdvertiseService maintains the persistent connection through which clients send connection requests
@@ -84,7 +87,7 @@ func (s *ExportingServer) createListenRequest(ctx context.Context) (*http.Reques
 	reqBody := ExporterAnnouncement{ExporterID: s.ExporterID}
 	reqBodyBytes, _ := json.Marshal(reqBody)
 
-	req, err := http.NewRequest("POST", s.RelayURL, bytes.NewReader(reqBodyBytes))
+	req, err := http.NewRequest("POST", s.RelayURL+Listen, bytes.NewReader(reqBodyBytes)) //@todo url here needs to aslddresss appropriate handler
 	if err != nil {
 		return nil, err
 	}

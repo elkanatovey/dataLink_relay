@@ -44,7 +44,7 @@ func TestHandleServerLongTermConnection(t *testing.T) {
 
 	reqBodyBytes, _ := json.Marshal(reqBody)
 
-	req, err := http.NewRequest("POST", "/long-term-connection", bytes.NewReader(reqBodyBytes))
+	req, err := http.NewRequest("POST", Listen, bytes.NewReader(reqBodyBytes))
 	if err != nil {
 		t.Fatal(err)
 	}
