@@ -1,6 +1,7 @@
 package relay
 
-//This file contains entities that are managed within the relay
+//This file contains the exporterDB a lookup table for importers to pass connection requests to exporters listening
+//on the relay. The format of these messages is also defined here
 
 import (
 	"context"
@@ -27,6 +28,7 @@ func InitImporterData(cr ConnectionRequest) *ImporterData {
 type Exporter struct {
 	ctx                    context.Context    // context is used to tell whether server connection is still open
 	exporterNotificationCh chan *ImporterData // messages passed to this channel are to be forwarded to the exporter
+	//@todo  maybe have the connection channel for the client stored here in map instead of own db?
 }
 
 func InitExporter(freshCTX context.Context) *Exporter {

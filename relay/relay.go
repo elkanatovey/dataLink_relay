@@ -15,6 +15,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"golang.org/x/sync/errgroup"
+	"io"
 	"net"
 	"net/http"
 )
@@ -151,14 +153,55 @@ func HandleClientConnection(db *ExporterDB) http.HandlerFunc {
 			http.Error(w, res.Error.Error(), http.StatusBadRequest)
 			return
 		}
+		imp := InitImporter(r.Context())
+		foo.put(imp) //put in db
+		serverConn := <-imp.exporterConnCh
+
+		if serverConn.err != nil {
+			http.Error(w, serverConn.err.Error(), http.StatusBadRequest)
+			return
+		}
+
 		//hijack connection
 		conn := hijackConn(w)
 		if conn == nil {
 			return
 		}
+
 		//wait for callback
 		//create data that can be connected to
 	}
+}
+
+func uniteConnections(importerConn net.Conn, exporterConn net.Conn) error {
+
+	var eg errgroup.Group
+
+	eg.Go(func() error { //@todo should errors be passed into sockets?
+		defer importerConn.Close()
+		defer exporterConn.Close()
+
+		_, err := io.Copy(exporterConn, importerConn)
+		if err != nil && !errors.Is(err, net.ErrClosed) {
+			return fmt.Errorf("exporter->importer: %w", err)
+		}
+
+		return nil
+	})
+
+	eg.Go(func() error {
+		defer importerConn.Close()
+		defer exporterConn.Close()
+
+		_, err := io.Copy(importerConn, exporterConn)
+		if err != nil && !errors.Is(err, net.ErrClosed) {
+			return fmt.Errorf("importer->exporter: %w", err)
+		}
+
+		return nil
+	})
+
+	return eg.Wait()
 }
 
 // Hijack the HTTP connection and use the TCP session
