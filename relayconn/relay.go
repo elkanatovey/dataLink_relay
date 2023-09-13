@@ -77,7 +77,7 @@ func registerHandlers(relayState *RelayData) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc(Listen, HandleServerLongTermConnection(relayState)) //listen
 	mux.HandleFunc(Dial, HandleClientConnection(relayState))           //call
-	mux.HandleFunc(Accept, HandleServerCallBackConnection)             //accept
+	mux.HandleFunc(Accept, HandleServerCallBackConnection(relayState)) //accept
 	return mux
 }
 
@@ -109,6 +109,7 @@ func HandleServerLongTermConnection(relayState *RelayData) http.HandlerFunc {
 		exporterID := req.ExporterID
 		if exporterID == "" {
 			http.Error(w, "Please specify an exporter name!", http.StatusInternalServerError)
+			relayState.logger.Errorln("exporter name not specified")
 			return
 		}
 
@@ -165,6 +166,7 @@ func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 			return
 		}
 
+
 		imd := InitImporterData(cr)
 
 		err = relayState.activeExporters.NotifyExporter(cr.ExporterID, imd)
@@ -210,6 +212,7 @@ func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 	}
 }
 
+// uniteConnections glues an importer connection with an exporter connection
 func uniteConnections(importerConn net.Conn, exporterConn net.Conn) error {
 
 	var eg errgroup.Group
@@ -255,12 +258,36 @@ func hijackConn(w http.ResponseWriter) net.Conn {
 	return conn
 }
 
-func HandleServerCallBackConnection(w http.ResponseWriter, r *http.Request) {
+func HandleServerCallBackConnection(relayState *RelayData) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var ca ConnectionAccept
+		err := json.NewDecoder(r.Body).Decode(&ca)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			relayState.logger.Errorln(err)
+			return
+		}
+
+		if ca.ExporterID == "" {
+			http.Error(w, "Please specify an exporter name!", http.StatusInternalServerError)
+			relayState.logger.Errorln("exporter name not specified")
+			return
+		}
+		if ca.ImporterID == "" {
+			http.Error(w, "Please specify an importer name!", http.StatusInternalServerError)
+			relayState.logger.Errorln("importer name not specified")
+			return
+		}
+
+		relayState.waitingImporters.NotifyImporter(getWaitingId(ca), {hijackConn(w), nil})
+
+		return
+	}
 	//get client id
 	//get socket from db according to id
 	//connect sockets
 
-	fmt.Printf("servercallback: %s /\n", r.Method)
+	//fmt.Printf("servercallback: %s /\n", r.Method)
 }
 
 // proxy via which server and client connect
