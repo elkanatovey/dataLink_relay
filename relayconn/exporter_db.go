@@ -74,6 +74,6 @@ func (db *ExporterDB) NotifyExporter(id string, msg *ImporterData) error {
 		exporter.exporterNotificationCh <- msg
 		return nil
 	}
-	var ErrNotFound = errors.New("Server was not found")
+	var ErrNotFound = errors.New("exporter server was not found")
 	return ErrNotFound
 }

@@ -57,7 +57,7 @@ const ServerPort = 3333
 
 // StartRelay starts the main relay function.
 // Responsibilities: start listener for servers, start listeners for clients
-func StartRelay() {
+func StartRelay() { //@todo currently incorrect
 	data := initRelayData()
 	mux := registerHandlers(data)
 
@@ -67,6 +67,7 @@ func StartRelay() {
 	}
 	if err := server.ListenAndServe(); err != nil {
 		if !errors.Is(err, http.ErrServerClosed) {
+			data.logger.Errorln(err)
 			fmt.Printf("error running http server: %s\n", err)
 		}
 	}
@@ -100,6 +101,7 @@ func HandleServerLongTermConnection(relayState *RelayData) http.HandlerFunc {
 		err := json.NewDecoder(r.Body).Decode(&req)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
+			relayState.logger.Errorln(err)
 			return
 		}
 
@@ -129,13 +131,13 @@ func HandleServerLongTermConnection(relayState *RelayData) http.HandlerFunc {
 		for importer := range connectionRequests.exporterNotificationCh {
 			event, err := MarshalToSSEEvent(&importer.msg)
 			if err != nil {
-				fmt.Println(err)
+				relayState.logger.Errorln(err)
 				importer.resultNotificationCh <- ForwardingSuccessNotification{NoteFail, err}
 			}
 
 			_, err = fmt.Fprint(w, event)
 			if err != nil {
-				fmt.Println(err)
+				relayState.logger.Errorln(err)
 				importer.resultNotificationCh <- ForwardingSuccessNotification{NoteFail, err}
 			}
 
@@ -159,6 +161,7 @@ func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 		err := json.NewDecoder(r.Body).Decode(&cr)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
+			relayState.logger.Errorln(err)
 			return
 		}
 
@@ -167,6 +170,7 @@ func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 		err = relayState.activeExporters.NotifyExporter(cr.ExporterID, imd)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
+			relayState.logger.Errorln(err, "notifyexporter failed")
 			return
 		}
 
@@ -187,12 +191,14 @@ func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 
 		if serverConn.err != nil {
 			http.Error(w, serverConn.err.Error(), http.StatusBadRequest)
+			relayState.logger.Errorln(err)
 			return
 		}
 
 		//hijack connection
 		clientConn := hijackConn(w)
 		if clientConn == nil {
+			relayState.logger.Errorln("server does not support hijacking")
 			return
 		}
 
@@ -201,8 +207,6 @@ func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 			relayState.logger.Errorln(err, "unite connections quit unexpectedly")
 		}
 		return
-		//wait for callback
-		//create data that can be connected to
 	}
 }
 
