@@ -1,4 +1,4 @@
-package relay
+package relayconn
 
 // Marshaling functions related to ConnectionRequests
 

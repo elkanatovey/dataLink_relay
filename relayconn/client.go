@@ -1,4 +1,4 @@
-package relay
+package relayconn
 
 import "net/http"
 

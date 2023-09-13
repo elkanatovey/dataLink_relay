@@ -1,4 +1,4 @@
-package relay
+package relayconn
 
 import (
 	"context"
@@ -37,7 +37,7 @@ func TestExporterDB(t *testing.T) {
 }
 
 func TestHandleServerLongTermConnection(t *testing.T) {
-	mockDB := InitExporterDB()
+	mockDB := initRelayData()
 	handler := HandleServerLongTermConnection(mockDB)
 
 	reqBody := ExporterAnnouncement{ExporterID: "123"}
@@ -77,7 +77,7 @@ func TestHandleServerLongTermConnection(t *testing.T) {
 		ImporterID: "123",
 		ExporterID: "456",
 	}
-	err = mockDB.NotifyExporter("123", InitImporterData(connReq))
+	err = mockDB.activeExporters.NotifyExporter("123", InitImporterData(connReq))
 	if err != nil {
 		return
 	}

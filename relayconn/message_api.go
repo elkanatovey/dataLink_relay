@@ -1,4 +1,4 @@
-package relay
+package relayconn
 
 // ConnectionRequest is sent by an impoerter to an exporter
 type ConnectionRequest struct {

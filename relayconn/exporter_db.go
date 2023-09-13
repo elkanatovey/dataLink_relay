@@ -1,4 +1,4 @@
-package relay
+package relayconn
 
 //This file contains the exporterDB a lookup table for importers to pass connection requests to exporters listening
 //on the relay. The format of these messages is also defined here

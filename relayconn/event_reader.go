@@ -1,4 +1,4 @@
-package relay
+package relayconn
 
 // This code deals with reading ConnectionRequests at the server from a buffered stream
 

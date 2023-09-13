@@ -6,15 +6,15 @@ import (
 	"time"
 
 	"fmt"
-	"mbg-relay/relay"
+	"mbg-relay/relayconn"
 )
 
 func main() {
 
-	go relay.StartRelay()
+	go relayconn.StartRelay()
 
 	time.Sleep(100 * time.Millisecond)
-	requestURL := fmt.Sprintf("http://localhost:%d/clientconn", relay.ServerPort)
+	requestURL := fmt.Sprintf("http://localhost:%d/clientconn", relayconn.ServerPort)
 	res, err := http.Get(requestURL)
 	if err != nil {
 		fmt.Printf("error making http request: %s\n", err)
@@ -24,5 +24,5 @@ func main() {
 	fmt.Printf("client: got response!\n")
 	fmt.Printf("client: status code: %d\n", res.StatusCode)
 
-	fmt.Println("random number:", relay.MaintainConnection())
+	fmt.Println("random number:", relayconn.MaintainConnection())
 }
