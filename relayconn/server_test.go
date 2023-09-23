@@ -13,7 +13,7 @@ func TestExportingServer_AdvertiseService(t *testing.T) {
 	//open sub point
 	//send messages
 	r := NewRelay()
-	relayServer = httptest.NewServer(r.mux)
+	relayServer = httptest.NewServer(r.Mux)
 
 	exportingServer := NewExportingServer(relayServer.URL, "foobar")
 

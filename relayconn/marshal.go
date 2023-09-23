@@ -22,23 +22,23 @@ func MarshalToSSEEvent(connReq *ConnectionRequest) (string, error) {
 		return "json marshalling unsuccessful", err
 	}
 
-	event := fmt.Sprintf("event: connection\ndata: %s\n\n", data)
+	event := fmt.Sprintf("event: connection\nData: %s\n\n", data)
 	return event, nil
 }
 
 func UnmarshalFromSSEEvent(sseEvent string) (*ConnectionRequest, error) {
 	var connReq ConnectionRequest
 
-	// Find the start of the JSON data in the SSE event
-	dataStart := strings.Index(sseEvent, "\ndata:")
+	// Find the start of the JSON Data in the SSE event
+	dataStart := strings.Index(sseEvent, "\nData:")
 	if dataStart == -1 {
-		return nil, fmt.Errorf("no data field found in SSE event")
+		return nil, fmt.Errorf("no Data field found in SSE event")
 	}
 
-	// Extract the JSON data
-	jsonData := sseEvent[dataStart+len("\ndata:"):]
+	// Extract the JSON Data
+	jsonData := sseEvent[dataStart+len("\nData:"):]
 	jsonData = strings.TrimSpace(jsonData)
-	// Unmarshal the JSON data into the struct
+	// Unmarshal the JSON Data into the struct
 	err := json.Unmarshal([]byte(jsonData), &connReq)
 	if err != nil {
 		return nil, err

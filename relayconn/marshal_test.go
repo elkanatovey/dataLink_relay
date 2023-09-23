@@ -6,7 +6,7 @@ import (
 
 func TestMarshalAndUnmarshal(t *testing.T) {
 	connReq := ConnectionRequest{
-		Data:       "Some data",
+		Data:       "Some Data",
 		ImporterID: "123",
 		ExporterID: "456",
 	}
@@ -34,7 +34,7 @@ func TestMarshalAndUnmarshal(t *testing.T) {
 
 func TestMarshalToSSEEvent(t *testing.T) {
 	connReq := ConnectionRequest{
-		Data:       "Some data",
+		Data:       "Some Data",
 		ImporterID: "123",
 		ExporterID: "456",
 	}
@@ -45,14 +45,14 @@ func TestMarshalToSSEEvent(t *testing.T) {
 		t.Errorf("Error marshaling to SSE event: %v", err)
 	}
 
-	expectedSSEEvent := "event: connection\ndata: {\"Data\":\"Some data\",\"ImporterID\":\"123\",\"ExporterID\":\"456\"}\n\n"
+	expectedSSEEvent := "event: connection\nData: {\"Data\":\"Some Data\",\"ImporterID\":\"123\",\"ExporterID\":\"456\"}\n\n"
 	if sseEvent != expectedSSEEvent {
 		t.Errorf("Unexpected SSE event string:\nExpected: %s\nActual:   %s", expectedSSEEvent, sseEvent)
 	}
 }
 
 func TestUnmarshalFromSSEEvent(t *testing.T) {
-	sseEvent := "event: connection\ndata: {\"Data\":\"Some data\",\"ImporterID\":\"123\",\"ExporterID\":\"456\"}\n\n"
+	sseEvent := "event: connection\nData: {\"Data\":\"Some Data\",\"ImporterID\":\"123\",\"ExporterID\":\"456\"}\n\n"
 
 	// Test UnmarshalFromSSEEvent
 	connReq, err := UnmarshalFromSSEEvent(sseEvent)
@@ -61,7 +61,7 @@ func TestUnmarshalFromSSEEvent(t *testing.T) {
 	}
 
 	expectedConnReq := &ConnectionRequest{
-		Data:       "Some data",
+		Data:       "Some Data",
 		ImporterID: "123",
 		ExporterID: "456",
 	}

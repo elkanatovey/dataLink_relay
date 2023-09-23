@@ -16,19 +16,17 @@ import (
 	"errors"
 	"fmt"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/sync/errgroup"
-	"io"
-	"net"
 	"net/http"
 )
 
-// Relay contains data for running relay code
+// Relay contains Data for running relay code
 type Relay struct {
-	data   *RelayData
-	mux    http.Handler
+	Data   *RelayData
+	Mux    http.Handler
 	logger *logrus.Entry
 }
 
+// RelayData contains dbs of exporters advertising services and importers waiting for callback connections
 type RelayData struct {
 	activeExporters  *ExporterDB
 	waitingImporters *ImporterDB
@@ -36,6 +34,7 @@ type RelayData struct {
 }
 
 func initRelayData() *RelayData {
+	setLogStyle()
 	return &RelayData{
 		InitExporterDB(),
 		InitImporterDB(),
@@ -47,29 +46,9 @@ func NewRelay() *Relay {
 	data := initRelayData()
 	mux := registerHandlers(data)
 	return &Relay{
-		data:   data,
-		mux:    mux,
+		Data:   data,
+		Mux:    mux,
 		logger: logrus.WithField("component", "relay"),
-	}
-}
-
-const ServerPort = 3333
-
-// StartRelay starts the main relay function.
-// Responsibilities: start listener for servers, start listeners for clients
-func StartRelay() { //@todo currently incorrect
-	data := initRelayData()
-	mux := registerHandlers(data)
-
-	server := http.Server{
-		Addr:    fmt.Sprintf(":%d", ServerPort),
-		Handler: mux,
-	}
-	if err := server.ListenAndServe(); err != nil {
-		if !errors.Is(err, http.ErrServerClosed) {
-			data.logger.Errorln(err)
-			fmt.Printf("error running http server: %s\n", err)
-		}
 	}
 }
 
@@ -81,7 +60,8 @@ func registerHandlers(relayState *RelayData) *http.ServeMux {
 	return mux
 }
 
-// under construction
+// HandleServerLongTermConnection maintains a persistent connection on behalf of an Exporter and passes connection
+// requests back to the underlying ExportingServer when received
 func HandleServerLongTermConnection(relayState *RelayData) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -151,21 +131,18 @@ func HandleServerLongTermConnection(relayState *RelayData) http.HandlerFunc {
 	}
 }
 
-// getWaitingID calculates the id of a waiting request based on relevant importer/exporter ids
-func getWaitingId(cr ConnectionRequest) string {
-	return cr.ImporterID + cr.ExporterID
-}
-
+// HandleClientConnection passes a ConnectionRequest to a waiting Exporter and waits for a socket to be received
+// from a callback connection with which to connect an Importer connection
 func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var cr ConnectionRequest
 		err := json.NewDecoder(r.Body).Decode(&cr)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
+			//relayState.logger.Caller("location", "HandleClientConn")
 			relayState.logger.Errorln(err)
 			return
 		}
-
 
 		imd := InitImporterData(cr)
 
@@ -183,10 +160,10 @@ func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 		}
 		imp := InitImporter(r.Context())
 
-		relayState.waitingImporters.AddImporter(getWaitingId(cr), imp)
+		relayState.waitingImporters.AddImporter(getWaitingImporterId(cr), imp)
 		go func() { //@todo the relay in principle allows other server attempts befpre return, should handle?
 			<-r.Context().Done()
-			relayState.waitingImporters.RemoveImporter(getWaitingId(cr))
+			relayState.waitingImporters.RemoveImporter(getWaitingImporterId(cr))
 		}()
 
 		serverConn := <-imp.sockPassCh //@todo need to deal with timeout here
@@ -212,52 +189,8 @@ func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 	}
 }
 
-// uniteConnections glues an importer connection with an exporter connection
-func uniteConnections(importerConn net.Conn, exporterConn net.Conn) error {
-
-	var eg errgroup.Group
-
-	eg.Go(func() error {
-		defer importerConn.Close()
-		defer exporterConn.Close()
-
-		_, err := io.Copy(exporterConn, importerConn)
-		if err != nil && !errors.Is(err, net.ErrClosed) {
-			return fmt.Errorf("exporter->importer: %w", err)
-		}
-
-		return nil
-	})
-
-	eg.Go(func() error {
-		defer importerConn.Close()
-		defer exporterConn.Close()
-
-		_, err := io.Copy(importerConn, exporterConn)
-		if err != nil && !errors.Is(err, net.ErrClosed) {
-			return fmt.Errorf("importer->exporter: %w", err)
-		}
-
-		return nil
-	})
-
-	return eg.Wait()
-}
-
-// Hijack the HTTP connection and use the TCP session
-func hijackConn(w http.ResponseWriter) net.Conn {
-	// Check if we can hijack connection
-	hj, ok := w.(http.Hijacker)
-	if !ok {
-		http.Error(w, "server doesn't support hijacking", http.StatusInternalServerError)
-		return nil
-	}
-	w.WriteHeader(http.StatusOK) //should this be here?
-	// Hijack the connection
-	conn, _, _ := hj.Hijack()
-	return conn
-}
-
+// HandleServerCallBackConnection manages the server callback upon receiving a client request,
+// and passes the connection to the waiting client handler for gluing
 func HandleServerCallBackConnection(relayState *RelayData) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var ca ConnectionAccept
@@ -279,7 +212,20 @@ func HandleServerCallBackConnection(relayState *RelayData) http.HandlerFunc {
 			return
 		}
 
-		relayState.waitingImporters.NotifyImporter(getWaitingId(ca), {hijackConn(w), nil})
+		//hijack connection
+		conn := hijackConn(w)
+		err = nil
+		if conn == nil {
+			relayState.logger.Errorln("server does not support hijacking") //@todo should we notify the importer?
+			err = errors.New("unsuccesful server connect")
+		}
+
+		cn := &ServerConn{conn, err}
+
+		err = relayState.waitingImporters.NotifyImporter(getCallingExporterId(ca), cn)
+		if err != nil {
+			relayState.logger.Errorln(err)
+		}
 
 		return
 	}
