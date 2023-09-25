@@ -35,9 +35,9 @@ func main() {
 
 	time.Sleep(100 * time.Millisecond)
 	requestURL := fmt.Sprintf("http://localhost:%d%s", ServerPort, relayconn.Dial)
-	cr := relayconn.ConnectionRequest{"a", "123", "456"}
+	cr := relayconn.ConnectionRequest{ImporterID: "123", ExporterID: "456"}
 	reqBodyBytes, _ := json.Marshal(cr)
-	req, err := http.NewRequest("GET", requestURL, bytes.NewReader(reqBodyBytes))
+	req, err := http.NewRequest("POST", requestURL, bytes.NewReader(reqBodyBytes))
 	client := &http.Client{}
 	response, err := client.Do(req)
 
