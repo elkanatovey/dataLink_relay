@@ -42,6 +42,8 @@ func initRelayData() *RelayData {
 	}
 }
 
+// NewRelay returns a Relay with all initialised data structures and handler functions. To start the relay it's mux needs
+// to be passed to a http.Server and then start the server
 func NewRelay() *Relay {
 	data := initRelayData()
 	mux := registerHandlers(data)
@@ -148,8 +150,8 @@ func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 
 		err = relayState.activeExporters.NotifyExporter(cr.ExporterID, imd)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			relayState.logger.Errorln(err, "notifyexporter failed")
+			http.Error(w, err.Error(), http.StatusNotFound)
+			relayState.logger.Errorln(err, " notifyexporter failed")
 			return
 		}
 
