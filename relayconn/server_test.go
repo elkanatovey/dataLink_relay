@@ -20,7 +20,9 @@ func TestExportingServer_AdvertiseService(t *testing.T) {
 	handlingChennel := make(chan *ConnectionRequest)
 	ctx, _ := context.WithCancel(context.Background()) // need to add  sse events to server to send + spin up gouroutine for export logic
 
-	err := exportingServer.AdvertiseService(ctx, handlingChennel)
+	errChan := exportingServer.AdvertiseService(ctx, handlingChennel)
+	//var ee error
+	err := <-errChan
 	if err != nil {
 		t.Errorf("should be nil!")
 	}
