@@ -9,13 +9,15 @@
 //    4) Exporter calls back, exporter and importer sockets are connected
 //@todo support mtls
 
-package relayconn
+package relay
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/sirupsen/logrus"
+	"mbg-relay/relayconn/api"
+	"mbg-relay/relayconn/utils/logutils"
 	"net/http"
 )
 
@@ -34,7 +36,7 @@ type RelayData struct {
 }
 
 func initRelayData() *RelayData {
-	setLogStyle()
+	logutils.SetLogStyle()
 	return &RelayData{
 		InitExporterDB(),
 		InitImporterDB(),
@@ -56,9 +58,9 @@ func NewRelay() *Relay {
 
 func registerHandlers(relayState *RelayData) *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc(Listen, HandleServerLongTermConnection(relayState)) //listen
-	mux.HandleFunc(Dial, HandleClientConnection(relayState))           //call
-	mux.HandleFunc(Accept, HandleServerCallBackConnection(relayState)) //accept
+	mux.HandleFunc(api.Listen, HandleServerLongTermConnection(relayState)) //listen
+	mux.HandleFunc(api.Dial, HandleClientConnection(relayState))           //call
+	mux.HandleFunc(api.Accept, HandleServerCallBackConnection(relayState)) //accept
 	return mux
 }
 
@@ -79,7 +81,7 @@ func HandleServerLongTermConnection(relayState *RelayData) http.HandlerFunc {
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("Connection", "keep-alive")
 
-		var req ExporterAnnouncement
+		var req api.ExporterAnnouncement
 		err := json.NewDecoder(r.Body).Decode(&req)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -103,7 +105,7 @@ func HandleServerLongTermConnection(relayState *RelayData) http.HandlerFunc {
 			<-r.Context().Done()
 			relayState.activeExporters.RemoveExporter(exporterID)
 			for connectionRequest := range connectionRequests.exporterNotificationCh {
-				connectionRequest.resultNotificationCh <- ForwardingSuccessNotification{NoteServerConnLost, nil}
+				connectionRequest.resultNotificationCh <- api.ForwardingSuccessNotification{api.NoteServerConnLost, nil}
 			}
 
 		}()
@@ -112,20 +114,20 @@ func HandleServerLongTermConnection(relayState *RelayData) http.HandlerFunc {
 		flusher.Flush()
 
 		for importer := range connectionRequests.exporterNotificationCh {
-			event, err := MarshalToSSEEvent(&importer.msg)
+			event, err := api.MarshalToSSEEvent(&importer.msg)
 			if err != nil {
 				relayState.logger.Errorln(err)
-				importer.resultNotificationCh <- ForwardingSuccessNotification{NoteFail, err}
+				importer.resultNotificationCh <- api.ForwardingSuccessNotification{api.NoteFail, err}
 			}
 
 			_, err = fmt.Fprint(w, event)
 			if err != nil {
 				relayState.logger.Errorln(err)
-				importer.resultNotificationCh <- ForwardingSuccessNotification{NoteFail, err}
+				importer.resultNotificationCh <- api.ForwardingSuccessNotification{api.NoteFail, err}
 			}
 
 			flusher.Flush()
-			importer.resultNotificationCh <- ForwardingSuccessNotification{NotePassed, nil}
+			importer.resultNotificationCh <- api.ForwardingSuccessNotification{api.NotePassed, nil}
 		}
 
 		fmt.Printf("server: %s /\n", r.Method)
@@ -137,7 +139,7 @@ func HandleServerLongTermConnection(relayState *RelayData) http.HandlerFunc {
 // from a callback connection with which to connect an Importer connection
 func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var cr ConnectionRequest
+		var cr api.ConnectionRequest
 		err := json.NewDecoder(r.Body).Decode(&cr)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -156,7 +158,7 @@ func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 		}
 
 		var res = <-imd.resultNotificationCh
-		if res.Message != NotePassed {
+		if res.Message != api.NotePassed {
 			http.Error(w, res.Error.Error(), http.StatusBadRequest)
 			return
 		}
@@ -195,7 +197,7 @@ func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 // and passes the connection to the waiting client handler for gluing
 func HandleServerCallBackConnection(relayState *RelayData) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var ca ConnectionAccept
+		var ca api.ConnectionAccept
 		err := json.NewDecoder(r.Body).Decode(&ca)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)

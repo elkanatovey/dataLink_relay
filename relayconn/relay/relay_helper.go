@@ -1,21 +1,22 @@
-package relayconn
+package relay
 
 import (
 	"errors"
 	"fmt"
 	"golang.org/x/sync/errgroup"
 	"io"
+	"mbg-relay/relayconn/api"
 	"net"
 	"net/http"
 )
 
 // getWaitingImporterId calculates the id of a waiting request based on relevant importer/exporter ids
-func getWaitingImporterId(cr ConnectionRequest) string {
+func getWaitingImporterId(cr api.ConnectionRequest) string {
 	return cr.ImporterID + cr.ExporterID
 }
 
 // getCallingExporterId calculates the id of a callback response based on relevant importer/exporter ids
-func getCallingExporterId(ca ConnectionAccept) string {
+func getCallingExporterId(ca api.ConnectionAccept) string {
 	return ca.ImporterID + ca.ExporterID
 }
 

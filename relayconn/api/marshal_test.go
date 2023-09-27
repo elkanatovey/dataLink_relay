@@ -1,4 +1,4 @@
-package relayconn
+package api
 
 import (
 	"testing"

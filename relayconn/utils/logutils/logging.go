@@ -1,10 +1,10 @@
-package relayconn
+package logutils
 
 import (
 	"github.com/sirupsen/logrus"
 )
 
-func setLogStyle() {
+func SetLogStyle() {
 	logrus.SetReportCaller(true)
 	jsonFormatter := &logrus.JSONFormatter{
 		PrettyPrint:     true,

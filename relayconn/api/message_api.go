@@ -1,4 +1,4 @@
-package relayconn
+package api
 
 // ConnectionRequest is sent by an impoerter to an exporter
 type ConnectionRequest struct {
@@ -40,4 +40,10 @@ const (
 	Dial   string = "/clientconn"
 	Listen string = "/serverconn"
 	Accept string = "/servercallback"
+)
+
+// address prefixes
+const (
+	MTLS string = "https://"
+	TCP  string = "http://"
 )

@@ -1,4 +1,4 @@
-package relayconn
+package server
 
 // This code deals with reading ConnectionRequests at the server from a buffered stream
 
@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"mbg-relay/relayconn/api"
 )
 
 // EventStreamReader scans an io.Reader looking for EventStream messages.
@@ -46,10 +47,10 @@ func NewEventStreamReader(eventStream io.Reader, maxBufferSize int) *EventStream
 }
 
 // ReadEvent scans the EventStream for events.
-func (e *EventStreamReader) ReadEvent() (*ConnectionRequest, error) {
+func (e *EventStreamReader) ReadEvent() (*api.ConnectionRequest, error) {
 	if e.scanner.Scan() {
 		event := e.scanner.Bytes()
-		unmarshalled, err := UnmarshalFromSSEEvent(string(event[:]))
+		unmarshalled, err := api.UnmarshalFromSSEEvent(string(event[:]))
 		return unmarshalled, err
 	}
 	if err := e.scanner.Err(); err != nil {

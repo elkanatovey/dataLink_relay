@@ -1,4 +1,4 @@
-package relayconn
+package relay
 
 //This file contains the exporterDB a lookup table for importers to pass connection requests to exporters listening
 //on the relay. The format of these messages is also defined here
@@ -6,19 +6,20 @@ package relayconn
 import (
 	"context"
 	"errors"
+	"mbg-relay/relayconn/api"
 	"sync"
 )
 
 // ImporterData contains a message for an exporter and channel for communicating back to the respective importer
 type ImporterData struct {
-	msg                  ConnectionRequest                  // message for exporter
-	resultNotificationCh chan ForwardingSuccessNotification // report to importer routine if message was passed to exporter socket successfully @todo should this be bool?
+	msg                  api.ConnectionRequest                  // message for exporter
+	resultNotificationCh chan api.ForwardingSuccessNotification // report to importer routine if message was passed to exporter socket successfully @todo should this be bool?
 }
 
-func InitImporterData(cr ConnectionRequest) *ImporterData {
+func InitImporterData(cr api.ConnectionRequest) *ImporterData {
 	importer := &ImporterData{
 		msg:                  cr,
-		resultNotificationCh: make(chan ForwardingSuccessNotification),
+		resultNotificationCh: make(chan api.ForwardingSuccessNotification),
 	}
 	return importer
 }

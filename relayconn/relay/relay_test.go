@@ -1,7 +1,9 @@
-package relayconn
+package relay
 
 import (
 	"context"
+	"mbg-relay/relayconn/api"
+
 	//"testing"
 
 	"bytes"
@@ -40,11 +42,11 @@ func TestHandleServerLongTermConnection(t *testing.T) {
 	mockDB := initRelayData()
 	handler := HandleServerLongTermConnection(mockDB)
 
-	reqBody := ExporterAnnouncement{ExporterID: "123"}
+	reqBody := api.ExporterAnnouncement{ExporterID: "123"}
 
 	reqBodyBytes, _ := json.Marshal(reqBody)
 
-	req, err := http.NewRequest("POST", Listen, bytes.NewReader(reqBodyBytes))
+	req, err := http.NewRequest("POST", api.Listen, bytes.NewReader(reqBodyBytes))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +74,7 @@ func TestHandleServerLongTermConnection(t *testing.T) {
 	}
 
 	// Simulate SSE messages
-	connReq := ConnectionRequest{
+	connReq := api.ConnectionRequest{
 		Data:       "Some data",
 		ImporterID: "123",
 		ExporterID: "456",
@@ -83,7 +85,7 @@ func TestHandleServerLongTermConnection(t *testing.T) {
 	}
 	// Wait for a short time to ensure the handler handles the message sent
 	time.Sleep(100 * time.Millisecond)
-	event, _ := MarshalToSSEEvent(&connReq)
+	event, _ := api.MarshalToSSEEvent(&connReq)
 
 	// Check the response body contains the expected SSE event
 	if rr.Body.String() != event {
