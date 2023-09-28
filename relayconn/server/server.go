@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/sirupsen/logrus"
+	"io"
 	"mbg-relay/relayconn/api"
 	"mbg-relay/relayconn/utils/httputils"
 	"net"
@@ -51,7 +52,7 @@ func (s *ExportingServer) AcceptConnection(ctx context.Context, cr *api.Connecti
 // AdvertiseService maintains the persistent connection through which clients send connection requests,
 // errors are propagated through the returned channel
 func (s *ExportingServer) AdvertiseService(ctx context.Context, handlingCH chan *api.ConnectionRequest) <-chan error {
-	res := make(chan error)
+	res := make(chan error, 1)
 
 	go func() {
 		resp, err := s.listenRequest(ctx)
@@ -76,13 +77,18 @@ func (s *ExportingServer) AdvertiseService(ctx context.Context, handlingCH chan 
 				return
 			default:
 				event, err := reader.ReadEvent()
-				if err != nil {
-					s.logger.Errorln(err)
+				if err != nil { // should we check here to make sure the connection is with the correct exporter?
+
+					// make sure that it wasn't closed on our end before logging
+					if err != io.EOF {
+						s.logger.Errorln(err)
+					}
 					//send off to be handled
 					res <- err
 					return
 				}
 				//sendoff to be handled
+				s.logger.Infof("received connection request from: %s", event.ImporterID)
 				handlingCH <- event
 			}
 

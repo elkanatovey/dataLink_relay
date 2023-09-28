@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"github.com/sirupsen/logrus"
 	"io"
 	"mbg-relay/relayconn/api"
 )
@@ -14,6 +15,7 @@ import (
 // EventStreamReader scans an io.Reader looking for EventStream messages.
 type EventStreamReader struct {
 	scanner *bufio.Scanner
+	logger  *logrus.Entry
 }
 
 // NewEventStreamReader creates an instance of EventStreamReader.
@@ -43,6 +45,7 @@ func NewEventStreamReader(eventStream io.Reader, maxBufferSize int) *EventStream
 
 	return &EventStreamReader{
 		scanner: scanner,
+		logger:  logrus.WithField("component", "eventstreamreader"),
 	}
 }
 
@@ -55,6 +58,7 @@ func (e *EventStreamReader) ReadEvent() (*api.ConnectionRequest, error) {
 	}
 	if err := e.scanner.Err(); err != nil {
 		if errors.Is(err, context.Canceled) {
+			e.logger.Infof("reader closed due to context cancellation")
 			return nil, io.EOF
 		}
 		return nil, err
