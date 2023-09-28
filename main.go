@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"mbg-relay/relayconn/api"
+	"mbg-relay/relayconn/relay"
 	"net/http"
 	"os"
 	"time"
 
 	"fmt"
-	"mbg-relay/relayconn"
 )
 
 const ServerPort = 3333
@@ -17,7 +18,7 @@ const ServerPort = 3333
 // StartRelay starts the main relay function.
 // Responsibilities: start listener for servers, start listeners for clients
 func StartRelay() { //@todo currently incorrect
-	r := relayconn.NewRelay()
+	r := relay.NewRelay()
 	server := http.Server{
 		Addr:    fmt.Sprintf(":%d", ServerPort),
 		Handler: r.Mux,
@@ -34,8 +35,8 @@ func main() {
 	go StartRelay()
 
 	time.Sleep(100 * time.Millisecond)
-	requestURL := fmt.Sprintf("http://localhost:%d%s", ServerPort, relayconn.Dial)
-	cr := relayconn.ConnectionRequest{ImporterID: "123", ExporterID: "456"}
+	requestURL := fmt.Sprintf("%slocalhost:%d%s", api.TCP, ServerPort, api.Dial)
+	cr := api.ConnectionRequest{ImporterID: "123", ExporterID: "456"}
 	reqBodyBytes, _ := json.Marshal(cr)
 	req, err := http.NewRequest("POST", requestURL, bytes.NewReader(reqBodyBytes))
 	client := &http.Client{}
@@ -50,5 +51,5 @@ func main() {
 	fmt.Printf("client: got response!\n")
 	fmt.Printf("client: status code: %d\n", response.StatusCode)
 
-	fmt.Println("random number:", relayconn.MaintainConnection())
+	fmt.Println("random number:", relay.MaintainConnection())
 }

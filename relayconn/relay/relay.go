@@ -23,16 +23,26 @@ import (
 
 // Relay contains Data for running relay code
 type Relay struct {
-	Data   *RelayData
+	Data   StateManager
 	Mux    http.Handler
 	logger *logrus.Entry
 }
 
+// StateManager represents a db of exporters and importers waiting to connect
+type StateManager interface {
+	AddExporter(expID string, exp *Exporter)
+	RemoveExporter(expID string)
+	NotifyExporter(expID string, msg *ImporterData) error
+	AddImporter(impID string, imp *Importer)
+	RemoveImporter(impID string)
+	NotifyImporter(impID string, connection *ServerConn) error
+}
+
 // RelayData contains dbs of exporters advertising services and importers waiting for callback connections
 type RelayData struct {
-	activeExporters  *ExporterDB
-	waitingImporters *ImporterDB
-	logger           *logrus.Entry
+	*ExporterDB
+	*ImporterDB
+	logger *logrus.Entry
 }
 
 func initRelayData() *RelayData {
@@ -99,11 +109,11 @@ func HandleServerLongTermConnection(relayState *RelayData) http.HandlerFunc {
 
 		//allow importers to listenRequest this service
 		connectionRequests := InitExporter(r.Context())
-		relayState.activeExporters.AddExporter(exporterID, connectionRequests)
+		relayState.AddExporter(exporterID, connectionRequests)
 
 		go func() {
 			<-r.Context().Done()
-			relayState.activeExporters.RemoveExporter(exporterID)
+			relayState.RemoveExporter(exporterID)
 			for connectionRequest := range connectionRequests.exporterNotificationCh {
 				connectionRequest.resultNotificationCh <- api.ForwardingSuccessNotification{api.NoteServerConnLost, nil}
 			}
@@ -150,7 +160,7 @@ func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 
 		imd := InitImporterData(cr)
 
-		err = relayState.activeExporters.NotifyExporter(cr.ExporterID, imd)
+		err = relayState.NotifyExporter(cr.ExporterID, imd)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusNotFound)
 			relayState.logger.Errorln(err, " notifyexporter failed")
@@ -164,10 +174,10 @@ func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 		}
 		imp := InitImporter(r.Context())
 
-		relayState.waitingImporters.AddImporter(getWaitingImporterId(cr), imp)
+		relayState.AddImporter(getWaitingImporterId(cr), imp)
 		go func() { //@todo the relay in principle allows other server attempts befpre return, should handle?
 			<-r.Context().Done()
-			relayState.waitingImporters.RemoveImporter(getWaitingImporterId(cr))
+			relayState.RemoveImporter(getWaitingImporterId(cr))
 		}()
 
 		serverConn := <-imp.sockPassCh //@todo need to deal with timeout here
@@ -226,7 +236,7 @@ func HandleServerCallBackConnection(relayState *RelayData) http.HandlerFunc {
 
 		cn := &ServerConn{conn, err}
 
-		err = relayState.waitingImporters.NotifyImporter(getCallingExporterId(ca), cn)
+		err = relayState.NotifyImporter(getCallingExporterId(ca), cn)
 		if err != nil {
 			relayState.logger.Errorln(err)
 		}

@@ -24,7 +24,7 @@ type Importer struct {
 func InitImporter(freshCTX context.Context) *Importer {
 	importer := &Importer{
 		ctx:        freshCTX, //@todo when to timeout on request?
-		sockPassCh: make(chan *ServerConn),
+		sockPassCh: make(chan *ServerConn, 1),
 	}
 	return importer
 }

@@ -19,7 +19,7 @@ type ImporterData struct {
 func InitImporterData(cr api.ConnectionRequest) *ImporterData {
 	importer := &ImporterData{
 		msg:                  cr,
-		resultNotificationCh: make(chan api.ForwardingSuccessNotification),
+		resultNotificationCh: make(chan api.ForwardingSuccessNotification, 1),
 	}
 	return importer
 }
@@ -35,7 +35,7 @@ type Exporter struct {
 func InitExporter(freshCTX context.Context) *Exporter {
 	exporter := &Exporter{
 		ctx:                    freshCTX,
-		exporterNotificationCh: make(chan *ImporterData),
+		exporterNotificationCh: make(chan *ImporterData, 100),
 	}
 	return exporter
 }
