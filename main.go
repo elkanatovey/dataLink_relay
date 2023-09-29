@@ -1,29 +1,37 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
+	//"bytes"
+	//"context"
+	//"encoding/json"
 	"errors"
-	"mbg-relay/relayconn/api"
-	"mbg-relay/relayconn/relay"
-	"net/http"
-	"os"
 	"time"
+
+	//"mbg-relay/relayconn/api"
+	//client2 "mbg-relay/relayconn/client"
+	"mbg-relay/relayconn/relay"
+	"mbg-relay/relayconn/server"
+	//"net"
+	"net/http"
+	//"os"
+	//"time"
 
 	"fmt"
 )
 
-const ServerPort = 3333
+const serverPort = 3333
+const exporterName = "foo"
+const importerName = "bar"
 
 // StartRelay starts the main relay function.
 // Responsibilities: start listener for servers, start listeners for clients
 func StartRelay() { //@todo currently incorrect
 	r := relay.NewRelay()
-	server := http.Server{
-		Addr:    fmt.Sprintf(":%d", ServerPort),
+	untrustedRelay := http.Server{
+		Addr:    fmt.Sprintf("localhost:%d", serverPort),
 		Handler: r.Mux,
 	}
-	if err := server.ListenAndServe(); err != nil {
+	if err := untrustedRelay.ListenAndServe(); err != nil {
 		if !errors.Is(err, http.ErrServerClosed) {
 			fmt.Printf("error running http server: %s\n", err)
 		}
@@ -31,25 +39,16 @@ func StartRelay() { //@todo currently incorrect
 }
 
 func main() {
-
+	relayAddress := fmt.Sprintf("localhost:%d", serverPort)
 	go StartRelay()
 
-	time.Sleep(100 * time.Millisecond)
-	requestURL := fmt.Sprintf("%slocalhost:%d%s", api.TCP, ServerPort, api.Dial)
-	cr := api.ConnectionRequest{ImporterID: "123", ExporterID: "456"}
-	reqBodyBytes, _ := json.Marshal(cr)
-	req, err := http.NewRequest("POST", requestURL, bytes.NewReader(reqBodyBytes))
-	client := &http.Client{}
-	response, err := client.Do(req)
-
-	//res, err := http.Get(requestURL)
+	listener, err := server.Listen(relayAddress, exporterName)
 	if err != nil {
-		fmt.Printf("error making http request: %s\n", err)
-		os.Exit(1)
+		return
 	}
 
-	fmt.Printf("client: got response!\n")
-	fmt.Printf("client: status code: %d\n", response.StatusCode)
+	time.Sleep(1000 * time.Millisecond)
+	listener.Close()
 
 	fmt.Println("random number:", relay.MaintainConnection())
 }
