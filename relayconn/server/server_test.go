@@ -38,14 +38,19 @@ func TestExportingServer_AdvertiseService(t *testing.T) {
 
 	// channel to receive connrequests
 	handlingChennel := make(chan *api.ConnectionRequest, 100)
+	errChan := make(chan error, 1)
 	ctx, cancel := context.WithCancel(context.Background()) // need to add  sse events to server to send + spin up gouroutine for export logic
 
 	//advertise
-	errChan := exportingServer.AdvertiseService(ctx, handlingChennel)
+	err := exportingServer.AdvertiseService(ctx, handlingChennel, errChan)
+	if err != nil {
+		t.Errorf(err.Error())
+		t.Errorf("connreq1 fail")
+	}
 	time.Sleep(1000 * time.Millisecond)
 
 	// notify exporter on relay end
-	err := r.Data.NotifyExporter(connReq1.ExporterID, relay.InitImporterData(connReq1))
+	err = r.Data.NotifyExporter(connReq1.ExporterID, relay.InitImporterData(connReq1))
 	if err != nil {
 		t.Errorf(err.Error())
 		t.Errorf("connreq1 fail")

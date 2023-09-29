@@ -50,30 +50,30 @@ func (s *ExportingServer) AcceptConnection(ctx context.Context, cr *api.Connecti
 }
 
 // AdvertiseService maintains the persistent connection through which clients send connection requests,
-// errors are propagated through the returned channel
-func (s *ExportingServer) AdvertiseService(ctx context.Context, handlingCH chan *api.ConnectionRequest) <-chan error {
-	res := make(chan error, 1)
+// errors are propagated through the passed in channel, canceling the context will close both passed in channels
+func (s *ExportingServer) AdvertiseService(ctx context.Context, handlingCH chan *api.ConnectionRequest, errCH chan error) error {
+
+	resp, err := s.listenRequest(ctx)
+	if err != nil {
+		s.logger.Errorln(err)
+		return err
+	}
+	if resp.StatusCode != http.StatusOK {
+		err = fmt.Errorf("could not connect to stream: %s", http.StatusText(resp.StatusCode))
+		s.logger.Errorln(err)
+		resp.Body.Close()
+		return err
+	}
 
 	go func() {
-		resp, err := s.listenRequest(ctx)
-		if err != nil {
-			s.logger.Errorln(err)
-			res <- err
-			return
-		}
 		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			err = fmt.Errorf("could not connect to stream: %s", http.StatusText(resp.StatusCode))
-			s.logger.Errorln(err)
-			res <- err
-			return
-		}
+		defer close(handlingCH)
+		defer close(errCH)
 		reader := NewEventStreamReader(resp.Body, s.maxBufferSize)
 		for {
 			select {
 			case <-ctx.Done():
-				res <- nil //should handlingCH be closed here?
+				errCH <- nil //should handlingCH be closed here?
 				return
 			default:
 				event, err := reader.ReadEvent()
@@ -84,7 +84,7 @@ func (s *ExportingServer) AdvertiseService(ctx context.Context, handlingCH chan 
 						s.logger.Errorln(err)
 					}
 					//send off to be handled
-					res <- err
+					errCH <- err
 					return
 				}
 				//sendoff to be handled
@@ -95,7 +95,7 @@ func (s *ExportingServer) AdvertiseService(ctx context.Context, handlingCH chan 
 		}
 	}()
 
-	return res
+	return nil
 }
 
 // listenRequest opens the connection to the relay after building the connection request
