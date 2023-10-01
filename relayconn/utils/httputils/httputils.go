@@ -109,7 +109,12 @@ func Connect(address, url string, jsonData string) (net.Conn, error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("connect response code: %v", resp.StatusCode)
 	}
-
+	//// Send the message to the server
+	//_, err = c.Write([]byte("fooey1"))
+	//if err != nil {
+	//	fmt.Println("Error sending message 111111:", err)
+	//	return nil, err
+	//}
 	return c, nil
 
 }

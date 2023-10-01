@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"mbg-relay/example"
-	"mbg-relay/relayconn/relay"
 	"mbg-relay/relayconn/server"
+	"mbg-relay/relayconn/utils/logutils"
 	"net"
 	"os"
 )
@@ -27,7 +27,7 @@ func handleClient(conn net.Conn) {
 }
 
 func main() {
-
+	logutils.SetLogStyle()
 	relayAddress := fmt.Sprintf("localhost:%d", example.ServerPort)
 
 	listener, err := server.Listen(relayAddress, example.ExporterName)
@@ -35,20 +35,12 @@ func main() {
 		return
 	}
 	defer listener.Close()
-	conn, err := listener.Accept()
-	if err != nil {
-		fmt.Println("Error accepting: ", err.Error())
-		os.Exit(1)
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			fmt.Println("Error accepting: ", err.Error())
+			os.Exit(1)
+		}
+		go handleClient(conn)
 	}
-	handleClient(conn)
-	//for {
-	//	conn, err := listener.Accept()
-	//	if err != nil {
-	//		fmt.Println("Error accepting: ", err.Error())
-	//		os.Exit(1)
-	//	}
-	//	go handleClient(conn)
-	//}
-
-	fmt.Println("random number:", relay.MaintainConnection())
 }

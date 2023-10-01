@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"mbg-relay/relayconn/api"
-	"mbg-relay/relayconn/utils/logutils"
 	"net/http"
 )
 
@@ -46,7 +45,6 @@ type RelayData struct {
 }
 
 func initRelayData() *RelayData {
-	logutils.SetLogStyle()
 	return &RelayData{
 		InitExporterDB(),
 		InitImporterDB(),

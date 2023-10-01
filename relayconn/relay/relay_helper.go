@@ -38,12 +38,14 @@ func hijackConn(w http.ResponseWriter) net.Conn {
 func uniteConnections(importerConn net.Conn, exporterConn net.Conn) error {
 
 	var eg errgroup.Group
+	fmt.Printf("uniteconn ")
 
 	eg.Go(func() error {
 		defer importerConn.Close()
 		defer exporterConn.Close()
 
-		_, err := io.Copy(exporterConn, importerConn)
+		nb, err := io.Copy(exporterConn, importerConn)
+		fmt.Printf("server written bytes %s \n", nb)
 		if err != nil && !errors.Is(err, net.ErrClosed) {
 			return fmt.Errorf("exporter->importer: %w", err)
 		}
@@ -55,7 +57,8 @@ func uniteConnections(importerConn net.Conn, exporterConn net.Conn) error {
 		defer importerConn.Close()
 		defer exporterConn.Close()
 
-		_, err := io.Copy(importerConn, exporterConn)
+		cnb, err := io.Copy(importerConn, exporterConn)
+		fmt.Printf("client written bytes %s \n", cnb)
 		if err != nil && !errors.Is(err, net.ErrClosed) {
 			return fmt.Errorf("importer->exporter: %w", err)
 		}

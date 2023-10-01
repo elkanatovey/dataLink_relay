@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"mbg-relay/example"
 	"mbg-relay/relayconn/relay"
+	"mbg-relay/relayconn/utils/logutils"
 	"net/http"
 )
 
 func StartRelay() { //@todo currently incorrect
+	logutils.SetLogStyle()
 	r := relay.NewRelay()
 	untrustedRelay := http.Server{
 		Addr:    fmt.Sprintf("localhost:%d", example.ServerPort),
