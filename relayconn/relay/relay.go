@@ -84,8 +84,7 @@ func HandleServerLongTermConnection(relayState *RelayData) http.HandlerFunc {
 			http.Error(w, "SSE not supported", http.StatusInternalServerError)
 			return
 		}
-
-		fmt.Println("server connected to relay...")
+		relayState.logger.Infof("server connected to relay..")
 
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.Header().Set("Cache-Control", "no-cache")
@@ -107,6 +106,7 @@ func HandleServerLongTermConnection(relayState *RelayData) http.HandlerFunc {
 			return
 		}
 
+		relayState.logger.Infof("listening exporter: %s", req.ExporterID)
 		//allow importers to listenRequest this service
 		connectionRequests := InitExporter(r.Context())
 		relayState.AddExporter(exporterID, connectionRequests)
@@ -114,6 +114,7 @@ func HandleServerLongTermConnection(relayState *RelayData) http.HandlerFunc {
 		go func() {
 			<-r.Context().Done()
 			relayState.RemoveExporter(exporterID)
+			relayState.logger.Infof(" exporter %s stopped listening", req.ExporterID)
 			for connectionRequest := range connectionRequests.exporterNotificationCh {
 				connectionRequest.resultNotificationCh <- api.ForwardingSuccessNotification{api.NoteServerConnLost, nil}
 			}

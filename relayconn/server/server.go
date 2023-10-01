@@ -113,7 +113,7 @@ func (s *ExportingServer) createListenRequest(ctx context.Context) (*http.Reques
 	reqBody := api.ExporterAnnouncement{ExporterID: s.ExporterID}
 	reqBodyBytes, _ := json.Marshal(reqBody)
 
-	req, err := http.NewRequest("POST", s.RelayURL+api.Listen, bytes.NewReader(reqBodyBytes)) //@todo should we cancel context in case of error?
+	req, err := http.NewRequest("POST", api.TCP+s.RelayURL+api.Listen, bytes.NewReader(reqBodyBytes)) //@todo should we cancel context in case of error?
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +136,7 @@ func (s *ExportingServer) TCPCallbackReq(importerName string) (net.Conn, error) 
 		return nil, err
 	}
 
-	conn, resp := httputils.Connect(api.TCP+s.RelayURL, url, string(jsonData))
+	conn, resp := httputils.Connect(s.RelayURL, url, string(jsonData))
 	if resp == nil {
 		s.logger.Infof("Successfully Connected")
 		return conn, nil
