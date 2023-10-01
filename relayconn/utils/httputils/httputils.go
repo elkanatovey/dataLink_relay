@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	//"time"
 
 	"github.com/sirupsen/logrus"
 )
@@ -82,6 +83,16 @@ func Delete(url string, jsonData []byte, cl http.Client) ([]byte, error) {
 	return body, nil
 }
 
+type myConn struct {
+	net.Conn
+	r *http.Response
+}
+
+func (a myConn) Close() error {
+	a.r.Body.Close()
+	return a.Conn.Close()
+}
+
 // Connect is a convenience function to issue a CONNECT request
 func Connect(address, url string, jsonData string) (net.Conn, error) {
 	c, err := dial(address)
@@ -97,15 +108,20 @@ func Connect(address, url string, jsonData string) (net.Conn, error) {
 	}
 
 	resp, err := client.Do(req)
-	if resp != nil {
-		defer resp.Body.Close()
-	}
+	//defer func() {
+	//	io.Copy(io.Discard, io.LimitReader(resp.Body, 4096))
+	//	err = resp.Body.Close()
+	//	if err != nil {
+	//		println(111)
+	//	}
+
+	//}()
 
 	if err != nil {
 		log.Errorln(err)
 		return nil, err
 	}
-
+	mc := myConn{c, resp}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("connect response code: %v", resp.StatusCode)
 	}
@@ -115,7 +131,7 @@ func Connect(address, url string, jsonData string) (net.Conn, error) {
 	//	fmt.Println("Error sending message 111111:", err)
 	//	return nil, err
 	//}
-	return c, nil
+	return mc, nil
 
 }
 
