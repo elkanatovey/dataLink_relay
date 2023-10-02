@@ -1,29 +1,43 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"mbg-relay/example"
 	"mbg-relay/pkg/server"
 	"mbg-relay/pkg/utils/logutils"
 	"net"
 	"os"
+	"strings"
 )
 
-func handleClient(conn net.Conn) {
+func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
-	// Read data from the client
-	buffer := make([]byte, 1024)
-	n, err := conn.Read(buffer)
-	if err != nil {
-		fmt.Println("Error reading from client:", err)
-		return
+	fmt.Printf("Accepted connection from %s\n", conn.RemoteAddr())
+
+	// Create a buffered reader to read messages from the client.
+	reader := bufio.NewReader(conn)
+
+	for {
+		// Read a message from the client.
+		message, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("Error reading from connection:", err)
+			return
+		}
+
+		// Trim any leading/trailing whitespace and print the message.
+		message = strings.TrimSpace(message)
+		fmt.Printf("Received from client %s: %s\n", conn.RemoteAddr(), message)
+
+		// Echo the message back to the client.
+		_, err = conn.Write([]byte(message + "\n"))
+		if err != nil {
+			fmt.Println("Error writing to connection:", err)
+			return
+		}
 	}
-
-	// Convert the received data to a string
-	message := string(buffer[:n])
-
-	fmt.Printf("Received message from client: %s\n", message)
 }
 
 func main() {
@@ -41,6 +55,6 @@ func main() {
 			fmt.Println("Error accepting: ", err.Error())
 			os.Exit(1)
 		}
-		go handleClient(conn)
+		go handleConnection(conn)
 	}
 }
