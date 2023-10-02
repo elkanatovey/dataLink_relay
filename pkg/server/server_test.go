@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"io"
 	"mbg-relay/pkg/api"
 	"mbg-relay/pkg/relay"
@@ -37,7 +38,11 @@ func TestExportingServer_AdvertiseService(t *testing.T) {
 	exportingServer := NewExportingServer(relayServer.Listener.Addr().String(), exporterName)
 
 	// channel to receive connrequests
-	handlingChennel := make(chan *api.ConnectionRequest, 100)
+	handlingChennel := make(chan struct {
+		*api.ConnectionRequest
+		error
+	},
+		100)
 	errChan := make(chan error, 1)
 	ctx, cancel := context.WithCancel(context.Background()) // need to add  sse events to server to send + spin up gouroutine for export logic
 
@@ -62,18 +67,24 @@ func TestExportingServer_AdvertiseService(t *testing.T) {
 	}
 
 	a := <-handlingChennel
-	if *a != connReq1 {
+	if *a.ConnectionRequest != connReq1 {
 		t.Errorf("response body does not match expected SSE event:\nExpected: %s\nActual: %s", connReq1, a)
 	}
 	b := <-handlingChennel
-	if *b != connReq2 {
+	if *b.ConnectionRequest != connReq2 {
 		t.Errorf("response body does not match expected SSE event:\nExpected: %s\nActual: %s", connReq2, a)
 	}
 
 	cancel()
+
+	c := <-handlingChennel
+	if !errors.Is(c.error, context.Canceled) {
+		t.Errorf(c.Error())
+		t.Errorf("should be %s!", io.EOF)
+	}
 	//var ee error
 	err = <-errChan
-	if err != io.EOF {
+	if !errors.Is(err, context.Canceled) {
 		t.Errorf(err.Error())
 		t.Errorf("should be %s!", io.EOF)
 	}

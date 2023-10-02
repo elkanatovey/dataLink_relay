@@ -56,12 +56,20 @@ func (e *EventStreamReader) ReadEvent() (*api.ConnectionRequest, error) {
 		unmarshalled, err := api.UnmarshalFromSSEEvent(string(event[:]))
 		return unmarshalled, err
 	}
+
 	if err := e.scanner.Err(); err != nil {
+		//client closed connection
 		if errors.Is(err, context.Canceled) {
 			e.logger.Infof("reader closed due to context cancellation")
-			return nil, io.EOF
+			return nil, context.Canceled
 		}
+
+		e.logger.Errorln(err, "reader closed unexpectedly")
+		// general error
 		return nil, err
 	}
+
+	//server closed connection
+	e.logger.Infof("reader closed due to server closing connection")
 	return nil, io.EOF
 }

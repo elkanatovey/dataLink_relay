@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/sirupsen/logrus"
-	"io"
 	"mbg-relay/pkg/api"
 	"mbg-relay/pkg/utils/httputils"
 	"net"
@@ -42,7 +42,11 @@ func NewExportingServer(relayAddr string, id string, opts ...func(c *ExportingSe
 
 // AdvertiseService maintains the persistent connection through which clients send connection requests,
 // errors are propagated through the passed in channel, canceling the context will close both passed in channels
-func (s *ExportingServer) AdvertiseService(ctx context.Context, handlingCH chan *api.ConnectionRequest, errCH chan error) error {
+func (s *ExportingServer) AdvertiseService(ctx context.Context, handlingCH chan struct {
+	*api.ConnectionRequest
+	error
+},
+	errCH chan error) error {
 
 	resp, err := s.listenRequest(ctx)
 	if err != nil {
@@ -61,8 +65,9 @@ func (s *ExportingServer) AdvertiseService(ctx context.Context, handlingCH chan 
 		defer close(handlingCH)
 		defer close(errCH)
 		reader := NewEventStreamReader(resp.Body, s.maxBufferSize)
+
 		for {
-			select {
+			select { //@todo this case may be able to be removed
 			case <-ctx.Done():
 				errCH <- nil //should handlingCH be closed here?
 				return
@@ -70,19 +75,26 @@ func (s *ExportingServer) AdvertiseService(ctx context.Context, handlingCH chan 
 				event, err := reader.ReadEvent()
 				if err != nil { // should we check here to make sure the connection is with the correct exporter?
 
-					// make sure that it wasn't closed on our end before logging
-					if err != io.EOF {
-						s.logger.Errorln(err)
+					// notify reason for closing is from our end
+					if errors.Is(err, context.Canceled) {
+						errCH <- context.Canceled
 					}
+
 					//send off to be handled
-					errCH <- err
+					handlingCH <- struct {
+						*api.ConnectionRequest
+						error
+					}{nil, err}
 					return
 				}
+
 				//sendoff to be handled
 				s.logger.Infof("received connection request from: %s", event.ClientID)
-				handlingCH <- event
+				handlingCH <- struct {
+					*api.ConnectionRequest
+					error
+				}{event, nil}
 			}
-
 		}
 	}()
 
