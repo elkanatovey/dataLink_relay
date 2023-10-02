@@ -29,13 +29,13 @@ func InitConnectingClient(freshCTX context.Context) *ConnectingClient {
 	return importer
 }
 
-type ConnectingClientDB struct {
+type connectingClientDB struct {
 	connectingClients map[string]*ConnectingClient //map to store the connectingClients
 	mx                sync.RWMutex                 //RWMutex to protect the map
 }
 
-func InitConnectingClientDB() *ConnectingClientDB {
-	db := &ConnectingClientDB{
+func initConnectingClientDB() *connectingClientDB {
+	db := &connectingClientDB{
 		connectingClients: make(map[string]*ConnectingClient),
 		mx:                sync.RWMutex{},
 	}
@@ -43,21 +43,21 @@ func InitConnectingClientDB() *ConnectingClientDB {
 }
 
 // AddConnectingClient is called when a ConnectingClient is waiting on a connection to finish connecting
-func (db *ConnectingClientDB) AddConnectingClient(id string, imp *ConnectingClient) {
+func (db *connectingClientDB) AddConnectingClient(id string, imp *ConnectingClient) {
 	db.mx.Lock()
 	db.connectingClients[id] = imp
 	db.mx.Unlock()
 }
 
 // RemoveConnectingClient is used for cleanup of a ConnectingClient that is no longer is waiting on a connection via the relay
-func (db *ConnectingClientDB) RemoveConnectingClient(id string) {
+func (db *connectingClientDB) RemoveConnectingClient(id string) {
 	db.mx.Lock()
 	delete(db.connectingClients, id)
 	db.mx.Unlock()
 }
 
 // NotifyConnectingClient return an error if the server to access does not exist in the db nil otherwise
-func (db *ConnectingClientDB) NotifyConnectingClient(id string, connection *ServerConn) error {
+func (db *connectingClientDB) NotifyConnectingClient(id string, connection *ServerConn) error {
 	db.mx.RLock()
 	defer db.mx.RUnlock()
 	if importer, ok := db.connectingClients[id]; ok {

@@ -10,14 +10,15 @@ import (
 
 const bufferSize = 100
 
+// RelayListener listens for incoming connections via a relay over a http sse connection.
 type RelayListener struct {
-	manager       *ExportingServer //should this be promoted?
+	manager       *listenerManager //should this be promoted?
 	reqHandlingCh chan struct {
 		*api.ConnectionRequest
 		error
 	}
 	reqErrCh      chan error
-	closeListener context.CancelCauseFunc //calling this CancelFunc will close the persistent connection maintained by AdvertiseService()
+	closeListener context.CancelCauseFunc //calling this CancelFunc will close the persistent connection maintained by listen_internal()
 }
 
 // Accept return an error if the listener closed. The first error returned is the reason for closing,
@@ -32,7 +33,7 @@ func (r RelayListener) Accept() (net.Conn, error) {
 	if req.ConnectionRequest == nil && req.error == nil {
 		return nil, net.ErrClosed
 	}
-	return r.manager.TCPCallbackReq(req.ClientID)
+	return r.manager.internalTCPCallbackReq(req.ClientID)
 
 }
 
@@ -64,7 +65,7 @@ func Listen(relayURL string, listenerID string) (*RelayListener, error) {
 	ctx, cancel := context.WithCancelCause(context.Background())
 
 	listener := &RelayListener{
-		NewExportingServer(relayURL, listenerID),
+		newListenerManager(relayURL, listenerID),
 		make(chan struct {
 			*api.ConnectionRequest
 			error
@@ -72,7 +73,7 @@ func Listen(relayURL string, listenerID string) (*RelayListener, error) {
 		make(chan error, 1),
 		cancel,
 	}
-	err := listener.manager.AdvertiseService(ctx, listener.reqHandlingCh, listener.reqErrCh)
+	err := listener.manager.listenInternal(ctx, listener.reqHandlingCh, listener.reqErrCh)
 	if err != nil {
 		return nil, err
 	}

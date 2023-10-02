@@ -12,14 +12,14 @@ import (
 	"mbg-relay/pkg/api"
 )
 
-// EventStreamReader scans an io.Reader looking for EventStream messages.
-type EventStreamReader struct {
+// eventStreamReader scans an io.Reader looking for EventStream messages.
+type eventStreamReader struct {
 	scanner *bufio.Scanner
 	logger  *logrus.Entry
 }
 
-// NewEventStreamReader creates an instance of EventStreamReader.
-func NewEventStreamReader(eventStream io.Reader, maxBufferSize int) *EventStreamReader {
+// newEventStreamReader creates an instance of eventStreamReader.
+func newEventStreamReader(eventStream io.Reader, maxBufferSize int) *eventStreamReader {
 	scanner := bufio.NewScanner(eventStream)
 	scanner.Buffer(make([]byte, maxBufferSize), maxBufferSize)
 
@@ -43,14 +43,14 @@ func NewEventStreamReader(eventStream io.Reader, maxBufferSize int) *EventStream
 	// Set the split function for the scanning operation.
 	scanner.Split(split)
 
-	return &EventStreamReader{
+	return &eventStreamReader{
 		scanner: scanner,
 		logger:  logrus.WithField("component", "eventstreamreader"),
 	}
 }
 
-// ReadEvent scans the EventStream for events.
-func (e *EventStreamReader) ReadEvent() (*api.ConnectionRequest, error) {
+// readEvent scans the EventStream for events.
+func (e *eventStreamReader) readEvent() (*api.ConnectionRequest, error) {
 	if e.scanner.Scan() {
 		event := e.scanner.Bytes()
 		unmarshalled, err := api.UnmarshalFromSSEEvent(string(event[:]))

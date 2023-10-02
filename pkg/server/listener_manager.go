@@ -13,9 +13,8 @@ import (
 	"net/http"
 )
 
-// ExportingServer is a server side representation of a server listening for incoming connections via a relay.
-// It exports services via relay
-type ExportingServer struct {
+// listenerManager contains internal implementation details of a RelayListener's api
+type listenerManager struct {
 	Connection    *http.Client
 	RelayIPPort   string // ip of relay + port for example: 127.0.0.1:39887
 	ServerID      string
@@ -23,9 +22,9 @@ type ExportingServer struct {
 	logger        *logrus.Entry
 }
 
-// NewExportingServer creates a new ExportingServer
-func NewExportingServer(relayAddr string, id string, opts ...func(c *ExportingServer)) *ExportingServer {
-	s := &ExportingServer{
+// newListenerManager creates a new listenerManager
+func newListenerManager(relayAddr string, id string) *listenerManager {
+	s := &listenerManager{
 		RelayIPPort:   relayAddr,
 		ServerID:      id,
 		Connection:    &http.Client{},
@@ -33,16 +32,12 @@ func NewExportingServer(relayAddr string, id string, opts ...func(c *ExportingSe
 		logger:        logrus.WithField("component", "exportingserver"),
 	}
 
-	for _, opt := range opts {
-		opt(s)
-	}
-
 	return s
 }
 
-// AdvertiseService maintains the persistent connection through which clients send connection requests,
+// listenInternal maintains the persistent connection through which clients send connection requests,
 // errors are propagated through the passed in channel, canceling the context will close both passed in channels
-func (s *ExportingServer) AdvertiseService(ctx context.Context, handlingCH chan struct {
+func (s *listenerManager) listenInternal(ctx context.Context, handlingCH chan struct {
 	*api.ConnectionRequest
 	error
 },
@@ -64,20 +59,21 @@ func (s *ExportingServer) AdvertiseService(ctx context.Context, handlingCH chan 
 		defer resp.Body.Close()
 		defer close(handlingCH)
 		defer close(errCH)
-		reader := NewEventStreamReader(resp.Body, s.maxBufferSize)
+		reader := newEventStreamReader(resp.Body, s.maxBufferSize)
 
 		for {
 			select { //@todo this case may be able to be removed
 			case <-ctx.Done():
-				errCH <- nil //should handlingCH be closed here?
+				errCH <- context.Canceled //should handlingCH be closed here?
 				return
 			default:
-				event, err := reader.ReadEvent()
+				event, err := reader.readEvent()
 				if err != nil { // should we check here to make sure the connection is with the correct exporter?
 
 					// notify reason for closing is from our end
 					if errors.Is(err, context.Canceled) {
 						errCH <- context.Canceled
+
 					}
 
 					//send off to be handled
@@ -102,7 +98,7 @@ func (s *ExportingServer) AdvertiseService(ctx context.Context, handlingCH chan 
 }
 
 // listenRequest opens the connection to the relay after building the connection request
-func (s *ExportingServer) listenRequest(ctx context.Context) (*http.Response, error) {
+func (s *listenerManager) listenRequest(ctx context.Context) (*http.Response, error) {
 
 	req, err := s.createListenRequest(ctx)
 	if err != nil {
@@ -112,7 +108,7 @@ func (s *ExportingServer) listenRequest(ctx context.Context) (*http.Response, er
 }
 
 // createListenRequest builds the request to open the listen connection for the server
-func (s *ExportingServer) createListenRequest(ctx context.Context) (*http.Request, error) {
+func (s *listenerManager) createListenRequest(ctx context.Context) (*http.Request, error) {
 	reqBody := api.ListenRequest{ServerID: s.ServerID}
 	reqBodyBytes, _ := json.Marshal(reqBody)
 
@@ -128,8 +124,8 @@ func (s *ExportingServer) createListenRequest(ctx context.Context) (*http.Reques
 	return req, nil
 }
 
-// TCPCallbackReq calls back an importer via the relay at the given ip
-func (s *ExportingServer) TCPCallbackReq(importerName string) (net.Conn, error) {
+// internalTCPCallbackReq calls back a client via the relay at the given ip
+func (s *listenerManager) internalTCPCallbackReq(importerName string) (net.Conn, error) {
 	s.logger.Infof("Starting TCP callback to importer id %v via relay ip %v", importerName, s.RelayIPPort)
 	url := api.TCP + s.RelayIPPort + api.Accept
 

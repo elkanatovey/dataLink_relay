@@ -27,7 +27,8 @@ type Relay struct {
 	logger *logrus.Entry
 }
 
-// StateManager represents a db of listeningServers and connectingClients waiting to connect
+// StateManager represents the relays internal state with respect to all listeningServers and connectingClients
+// it is currently serving
 type StateManager interface {
 	AddListeningServer(expID string, exp *ListeningServer)
 	RemoveListeningServer(expID string)
@@ -39,15 +40,15 @@ type StateManager interface {
 
 // RelayData contains dbs of listeningServers advertising services and connectingClients waiting for callback connections
 type RelayData struct {
-	*ListeningServerDB
-	*ConnectingClientDB
+	*listeningServerDB
+	*connectingClientDB
 	logger *logrus.Entry
 }
 
 func initRelayData() *RelayData {
 	return &RelayData{
-		InitListeningServerDB(),
-		InitConnectingClientDB(),
+		initListeningServerDB(),
+		initConnectingClientDB(),
 		logrus.WithField("component", "relaydata"),
 	}
 }

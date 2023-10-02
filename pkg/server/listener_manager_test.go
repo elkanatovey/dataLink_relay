@@ -26,7 +26,7 @@ var connReq2 = api.ConnectionRequest{
 	ServerID: exporterName,
 }
 
-func TestExportingServer_AdvertiseService(t *testing.T) {
+func TestListenerManager_listenInternal(t *testing.T) {
 	//start relay
 	//open sub point
 	//send messages
@@ -35,7 +35,7 @@ func TestExportingServer_AdvertiseService(t *testing.T) {
 	r := relay.NewRelay()
 	relayServer = httptest.NewServer(r.Mux)
 
-	exportingServer := NewExportingServer(relayServer.Listener.Addr().String(), exporterName)
+	exportingServer := newListenerManager(relayServer.Listener.Addr().String(), exporterName)
 
 	// channel to receive connrequests
 	handlingChennel := make(chan struct {
@@ -47,7 +47,7 @@ func TestExportingServer_AdvertiseService(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background()) // need to add  sse events to server to send + spin up gouroutine for export logic
 
 	//advertise
-	err := exportingServer.AdvertiseService(ctx, handlingChennel, errChan)
+	err := exportingServer.listenInternal(ctx, handlingChennel, errChan)
 	if err != nil {
 		t.Errorf(err.Error())
 		t.Errorf("connreq1 fail")

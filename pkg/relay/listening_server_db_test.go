@@ -65,7 +65,7 @@ func TestExporterDB_NotifyExporter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			db := &ListeningServerDB{
+			db := &listeningServerDB{
 				listeningServers: tt.fields.exporters,
 				mx:               sync.RWMutex{},
 			}
@@ -79,7 +79,7 @@ func TestExporterDB_NotifyExporter(t *testing.T) {
 }
 
 func TestExporterDB(t *testing.T) {
-	a := InitListeningServerDB()
+	a := initListeningServerDB()
 	exp := "aa"
 	a.AddListeningServer(exp, InitListeningServer(context.TODO()))
 	a.RemoveListeningServer(exp)

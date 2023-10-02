@@ -1,6 +1,6 @@
 package relay
 
-//This file contains the ListeningServerDB a lookup table for connectingClients to pass connection requests to listeningServers listening
+//This file contains the listeningServerDB a lookup table for connectingClients to pass connection requests to listeningServers listening
 //on the relay. The format of these messages is also defined here
 
 import (
@@ -41,13 +41,13 @@ func InitListeningServer(freshCTX context.Context) *ListeningServer {
 	return server
 }
 
-type ListeningServerDB struct {
+type listeningServerDB struct {
 	listeningServers map[string]*ListeningServer //map to store the listeningServers
 	mx               sync.RWMutex                //RWMutex to protect the map
 }
 
-func InitListeningServerDB() *ListeningServerDB {
-	db := &ListeningServerDB{
+func initListeningServerDB() *listeningServerDB {
+	db := &listeningServerDB{
 		listeningServers: make(map[string]*ListeningServer),
 		mx:               sync.RWMutex{},
 	}
@@ -55,27 +55,27 @@ func InitListeningServerDB() *ListeningServerDB {
 }
 
 // AddListeningServer is called when a new server wishes to advertise via the relay
-func (db *ListeningServerDB) AddListeningServer(id string, exp *ListeningServer) {
+func (db *listeningServerDB) AddListeningServer(id string, exp *ListeningServer) {
 	db.mx.Lock()
 	db.listeningServers[id] = exp
 	db.mx.Unlock()
 }
 
 // RemoveListeningServer is used for cleanup of listeningServers no longer advertising via the relay
-func (db *ListeningServerDB) RemoveListeningServer(id string) {
+func (db *listeningServerDB) RemoveListeningServer(id string) {
 	db.mx.Lock()
 	delete(db.listeningServers, id)
 	db.mx.Unlock()
 }
 
 // NotifyListeningServer return an error if the server to access does not exist in the db nil otherwise
-func (db *ListeningServerDB) NotifyListeningServer(id string, msg *ClientData) error {
+func (db *listeningServerDB) NotifyListeningServer(id string, msg *ClientData) error {
 	db.mx.RLock()
 	defer db.mx.RUnlock()
 	if listeningServer, ok := db.listeningServers[id]; ok {
 		listeningServer.serverNotificationCh <- msg
 		return nil
 	}
-	var ErrNotFound = errors.New("listeningServer: " + id + " was not found")
+	var ErrNotFound = errors.New("ListeningServer: " + id + " was not found")
 	return ErrNotFound
 }
