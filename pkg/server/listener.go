@@ -13,11 +13,11 @@ type RelayListener struct {
 	manager       *ExportingServer //should this be promoted?
 	reqHandlingCh chan *api.ConnectionRequest
 	reqErrCh      chan error
-	closeListener context.CancelFunc
+	closeListener context.CancelFunc //calling this CancelFunc will close the persistent connection maintained by AdvertiseService()
 }
 
 func (r RelayListener) Accept() (net.Conn, error) {
-	req := <-r.reqHandlingCh
+	req := <-r.reqHandlingCh // a blocked Accept() call will be released when reqHandlingCh is closed i.e. RelayListener closed
 
 	//handling closed server
 	if req == nil {
@@ -29,7 +29,6 @@ func (r RelayListener) Accept() (net.Conn, error) {
 
 func (r RelayListener) Close() error {
 	r.closeListener()
-	//TODO deal with blocked accept requests here
 
 	err := <-r.reqErrCh
 	return err
