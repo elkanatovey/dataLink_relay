@@ -157,6 +157,7 @@ func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 			relayState.logger.Errorln(err)
 			return
 		}
+		relayState.logger.Infof(cr.ClientID+cr.ServerID, "connection request")
 
 		imd := InitClientData(cr)
 
@@ -188,6 +189,7 @@ func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 			return
 		}
 
+		relayState.logger.Infof(cr.ClientID+cr.ServerID, "connecting")
 		//hijack connection
 		clientConn := hijackConn(w)
 		if clientConn == nil {
@@ -199,6 +201,7 @@ func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 		if err != nil {
 			relayState.logger.Errorln(err, "unite connections quit unexpectedly")
 		}
+		relayState.logger.Infof(cr.ClientID+cr.ServerID, "complete")
 		return
 	}
 }

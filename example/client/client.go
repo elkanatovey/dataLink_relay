@@ -21,5 +21,6 @@ func main() {
 		fmt.Println("Error sending message:", err)
 		return
 	}
-	conn.Close()
+	defer conn.Close()
+
 }

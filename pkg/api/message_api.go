@@ -20,7 +20,7 @@ type ListenRequest struct {
 	ServerID string `json:"ServerID"`
 }
 
-// ForwardingSuccessNotification informs whether a ConnectionRequest was passed on successfully to the listening exporter by the relay
+// ForwardingSuccessNotification informs whether a ConnectionRequest was passed on successfully to the listening server by the relay
 type ForwardingSuccessNotification struct {
 	Message Notification
 	Error   error

@@ -10,10 +10,10 @@ import (
 	"sync"
 )
 
-// ClientData contains a message for an exporter and channel for communicating back to the respective importer
+// ClientData contains a message for an server and channel for communicating back to the respective importer
 type ClientData struct {
-	msg                  api.ConnectionRequest                  // message for exporter
-	resultNotificationCh chan api.ForwardingSuccessNotification // report to importer routine if message was passed to exporter socket successfully @todo should this be bool?
+	msg                  api.ConnectionRequest                  // message for server
+	resultNotificationCh chan api.ForwardingSuccessNotification // report to importer routine if message was passed to server socket successfully @todo should this be bool?
 }
 
 func InitClientData(cr api.ConnectionRequest) *ClientData {
@@ -29,7 +29,7 @@ func InitClientData(cr api.ConnectionRequest) *ClientData {
 // handler maintaining the persistent connection via the channel below
 type ListeningServer struct {
 	ctx                  context.Context  // context is used to tell whether server connection is still open
-	serverNotificationCh chan *ClientData // messages passed to this channel are to be forwarded to the exporter
+	serverNotificationCh chan *ClientData // messages passed to this channel are to be forwarded to the server
 	//@todo  maybe have the connection channel for the client stored here in map instead of own db?
 }
 
