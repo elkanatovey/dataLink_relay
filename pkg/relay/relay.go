@@ -114,6 +114,7 @@ func HandleServerLongTermConnection(relayState *RelayData) http.HandlerFunc {
 			<-r.Context().Done()
 			relayState.RemoveListeningServer(exporterID)
 			relayState.logger.Infof(" exporter %s stopped listening", req.ServerID)
+			close(connectionRequests.serverNotificationCh)
 			for connectionRequest := range connectionRequests.serverNotificationCh {
 				connectionRequest.resultNotificationCh <- api.ForwardingSuccessNotification{api.NoteServerConnLost, nil}
 			}
@@ -124,6 +125,7 @@ func HandleServerLongTermConnection(relayState *RelayData) http.HandlerFunc {
 		flusher.Flush()
 
 		for importer := range connectionRequests.serverNotificationCh {
+
 			event, err := api.MarshalToSSEEvent(&importer.msg)
 			if err != nil {
 				relayState.logger.Errorln(err)

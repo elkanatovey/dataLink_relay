@@ -1,34 +1,34 @@
 package main
 
 import (
-	//"bytes"
-	//"context"
-	//"encoding/json"
+	"context"
 	"errors"
+	"mbg-relay/pkg/client"
+	"mbg-relay/pkg/utils/logutils"
+	"net"
+	//"os"
+	"strconv"
 	"time"
 
-	//"mbg-relay/relayconn/api"
-	//client2 "mbg-relay/relayconn/client"
-	"mbg-relay/relayconn/relay"
-	"mbg-relay/relayconn/server"
-	//"net"
+	"mbg-relay/pkg/relay"
+	"mbg-relay/pkg/server"
+
 	"net/http"
-	//"os"
-	//"time"
 
 	"fmt"
 )
 
-const serverPort = 3333
-const exporterName = "foo"
-const importerName = "bar"
+const ServerPort = 3333
+const ServerName = "foo"
+const ClientName = "bar"
+
+var untrustedRelay http.Server
 
 // StartRelay starts the main relay function.
-// Responsibilities: start listener for servers, start listeners for clients
-func StartRelay() { //@todo currently incorrect
+func StartRelay() {
 	r := relay.NewRelay()
-	untrustedRelay := http.Server{
-		Addr:    fmt.Sprintf("localhost:%d", serverPort),
+	untrustedRelay = http.Server{
+		Addr:    fmt.Sprintf("localhost:%d", ServerPort),
 		Handler: r.Mux,
 	}
 	if err := untrustedRelay.ListenAndServe(); err != nil {
@@ -38,17 +38,87 @@ func StartRelay() { //@todo currently incorrect
 	}
 }
 
-func main() {
-	relayAddress := fmt.Sprintf("localhost:%d", serverPort)
-	go StartRelay()
+func handleClient(conn net.Conn) {
+	defer conn.Close()
 
-	listener, err := server.Listen(relayAddress, exporterName)
+	// Read data from the client
+	buffer := make([]byte, 1024)
+	n, err := conn.Read(buffer)
+	if err != nil {
+		fmt.Println("Error reading from client:", err)
+		return
+	}
+
+	// Convert the received data to a string
+	message := string(buffer[:n])
+
+	fmt.Printf("Received message from client: %s\n", message)
+
+	toWrite := "received message: " + message
+
+	_, err = conn.Write([]byte(toWrite))
+	if err != nil {
+		fmt.Println("Error sending message:", err)
+		return
+	}
+
+}
+
+func AcceptConnections(listener net.Listener) {
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			fmt.Println("Error accepting: ", err.Error())
+			return
+		}
+		go handleClient(conn)
+	}
+
+}
+
+func main() {
+	logutils.SetLogStyle()
+	//logrus.SetOutput(io.Discard)
+	relayAddress := fmt.Sprintf("localhost:%d", ServerPort)
+
+	//start relay
+	go StartRelay()
+	time.Sleep(1000 * time.Millisecond)
+
+	//start server
+	listener, err := server.Listen(relayAddress, ServerName)
 	if err != nil {
 		return
+	}
+	defer listener.Close()
+	go AcceptConnections(listener)
+
+	for i := 1; i < 5; i++ {
+		conn, err := client.DialTCP(relayAddress, ClientName+string(rune(i)), ServerName)
+		// Message to send
+		message := "Hello, server! from " + strconv.Itoa(i)
+
+		// Send the message to the server
+		_, err = conn.Write([]byte(message))
+		if err != nil {
+			fmt.Println("Error sending message:", err)
+			return
+		}
+		buffer := make([]byte, 1024)
+		n, err := conn.Read(buffer)
+		received := string(buffer[:n])
+
+		fmt.Printf("Received message from server: %s\n", received)
+
+		conn.Close()
 	}
 
 	time.Sleep(1000 * time.Millisecond)
 	listener.Close()
+	err = untrustedRelay.Shutdown(context.Background())
+	if err != nil {
+		fmt.Println("Error accepting: ", err.Error())
+	}
+	time.Sleep(1000 * time.Millisecond)
 
-	fmt.Println("random number:", relay.MaintainConnection())
 }
