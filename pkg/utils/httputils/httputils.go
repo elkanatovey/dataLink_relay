@@ -108,14 +108,6 @@ func Connect(address, url string, jsonData string) (net.Conn, error) {
 	}
 
 	resp, err := client.Do(req)
-	//defer func() {
-	//	io.Copy(io.Discard, io.LimitReader(resp.Body, 4096))
-	//	err = resp.Body.Close()
-	//	if err != nil {
-	//		println(111)
-	//	}
-
-	//}()
 
 	if err != nil {
 		log.Errorln(err)
@@ -125,12 +117,7 @@ func Connect(address, url string, jsonData string) (net.Conn, error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("connect response code: %v", resp.StatusCode)
 	}
-	//// Send the message to the server
-	//_, err = c.Write([]byte("fooey1"))
-	//if err != nil {
-	//	fmt.Println("Error sending message 111111:", err)
-	//	return nil, err
-	//}
+
 	return mc, nil
 
 }
