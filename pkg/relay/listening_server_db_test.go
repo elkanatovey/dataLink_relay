@@ -2,7 +2,7 @@ package relay
 
 import (
 	"context"
-	"mbg-relay/relayconn/api"
+	"mbg-relay/pkg/api"
 	"sync"
 	"testing"
 )

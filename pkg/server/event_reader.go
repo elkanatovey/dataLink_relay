@@ -9,7 +9,7 @@ import (
 	"errors"
 	"github.com/sirupsen/logrus"
 	"io"
-	"mbg-relay/relayconn/api"
+	"mbg-relay/pkg/api"
 )
 
 // EventStreamReader scans an io.Reader looking for EventStream messages.

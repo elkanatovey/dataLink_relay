@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"mbg-relay/example"
-	"mbg-relay/relayconn/server"
-	"mbg-relay/relayconn/utils/logutils"
+	"mbg-relay/pkg/server"
+	"mbg-relay/pkg/utils/logutils"
 	"net"
 	"os"
 )

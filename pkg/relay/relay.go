@@ -16,7 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/sirupsen/logrus"
-	"mbg-relay/relayconn/api"
+	"mbg-relay/pkg/api"
 	"net/http"
 )
 

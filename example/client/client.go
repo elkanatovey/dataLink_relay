@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"mbg-relay/example"
-	"mbg-relay/relayconn/client"
-	"mbg-relay/relayconn/utils/logutils"
+	"mbg-relay/pkg/client"
+	"mbg-relay/pkg/utils/logutils"
 )
 
 func main() {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"golang.org/x/sync/errgroup"
 	"io"
-	"mbg-relay/relayconn/api"
+	"mbg-relay/pkg/api"
 	"net"
 	"net/http"
 )

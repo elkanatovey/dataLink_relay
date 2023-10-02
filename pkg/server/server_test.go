@@ -3,8 +3,8 @@ package server
 import (
 	"context"
 	"io"
-	"mbg-relay/relayconn/api"
-	"mbg-relay/relayconn/relay"
+	"mbg-relay/pkg/api"
+	"mbg-relay/pkg/relay"
 	"net/http/httptest"
 	"testing"
 	"time"

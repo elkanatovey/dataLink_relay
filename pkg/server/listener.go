@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 	"io"
-	"mbg-relay/relayconn/api"
+	"mbg-relay/pkg/api"
 	"net"
 )
 

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"mbg-relay/example"
-	"mbg-relay/relayconn/relay"
-	"mbg-relay/relayconn/utils/logutils"
+	"mbg-relay/pkg/relay"
+	"mbg-relay/pkg/utils/logutils"
 	"net/http"
 )
 

@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/sirupsen/logrus"
-	"mbg-relay/relayconn/api"
-	"mbg-relay/relayconn/utils/httputils"
+	"mbg-relay/pkg/api"
+	"mbg-relay/pkg/utils/httputils"
 	"net"
 )
 

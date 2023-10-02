@@ -1,7 +1,7 @@
 package relay
 
 import (
-	"mbg-relay/relayconn/api"
+	"mbg-relay/pkg/api"
 
 	//"testing"
 

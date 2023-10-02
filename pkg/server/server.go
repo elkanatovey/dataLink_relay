@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"io"
-	"mbg-relay/relayconn/api"
-	"mbg-relay/relayconn/utils/httputils"
+	"mbg-relay/pkg/api"
+	"mbg-relay/pkg/utils/httputils"
 	"net"
 	"net/http"
 )
