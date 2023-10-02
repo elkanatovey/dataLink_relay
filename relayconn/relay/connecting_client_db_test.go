@@ -49,7 +49,7 @@ var importerName = "bb"
 
 func TestImporterDB_NotifyImporter(t *testing.T) {
 	type fields struct {
-		importers map[string]*Importer
+		importers map[string]*ConnectingClient
 		mx        sync.RWMutex
 	}
 	type args struct {
@@ -66,7 +66,7 @@ func TestImporterDB_NotifyImporter(t *testing.T) {
 		{
 			name: "basic_test",
 			fields: fields{
-				map[string]*Importer{importerName: InitImporter(context.TODO())},
+				map[string]*ConnectingClient{importerName: InitConnectingClient(context.TODO())},
 				sync.RWMutex{},
 			},
 			args: args{
@@ -80,7 +80,7 @@ func TestImporterDB_NotifyImporter(t *testing.T) {
 		{
 			name: "basic_test2",
 			fields: fields{
-				map[string]*Importer{importerName: InitImporter(context.TODO())},
+				map[string]*ConnectingClient{importerName: InitConnectingClient(context.TODO())},
 				sync.RWMutex{},
 			},
 			args: args{
@@ -94,12 +94,12 @@ func TestImporterDB_NotifyImporter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			db := &ImporterDB{
-				importers: tt.fields.importers,
-				mx:        sync.RWMutex{},
+			db := &ConnectingClientDB{
+				connectingClients: tt.fields.importers,
+				mx:                sync.RWMutex{},
 			}
 
-			if err := db.NotifyImporter(tt.args.id, tt.args.connection); (err != nil) != tt.wantErr {
+			if err := db.NotifyConnectingClient(tt.args.id, tt.args.connection); (err != nil) != tt.wantErr {
 				t.Errorf("NotifyImpporter() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

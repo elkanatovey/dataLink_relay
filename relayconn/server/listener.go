@@ -23,7 +23,7 @@ func (r RelayListener) Accept() (net.Conn, error) {
 	if req == nil {
 		return nil, io.EOF
 	}
-	return r.manager.TCPCallbackReq(req.ImporterID)
+	return r.manager.TCPCallbackReq(req.ClientID)
 
 }
 

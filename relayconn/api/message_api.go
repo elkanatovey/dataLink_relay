@@ -2,22 +2,22 @@ package api
 
 // ConnectionRequest is sent by an impoerter to an exporter
 type ConnectionRequest struct {
-	Data       string `json:"Data"`
-	ImporterID string `json:"ImporterID"`
-	ExporterID string `json:"ExporterID"`
+	Data     string `json:"Data"`
+	ClientID string `json:"ClientID"`
+	ServerID string `json:"ServerID"`
 }
 
 // ConnectionAccept is sent by an exporter to an importer
 type ConnectionAccept struct {
-	Data       string `json:"Data"`
-	ImporterID string `json:"ImporterID"`
-	ExporterID string `json:"ExporterID"`
+	Data     string `json:"Data"`
+	ClientID string `json:"ClientID"`
+	ServerID string `json:"ServerID"`
 }
 
-// ExporterAnnouncement is sent by an exporter opening a persistent connection to a relay
-type ExporterAnnouncement struct {
-	Data       string `json:"Data"`
-	ExporterID string `json:"ExporterID"`
+// ListenRequest is sent by an exporter opening a persistent connection to a relay
+type ListenRequest struct {
+	Data     string `json:"Data"`
+	ServerID string `json:"ServerID"`
 }
 
 // ForwardingSuccessNotification informs whether a ConnectionRequest was passed on successfully to the listening exporter by the relay

@@ -6,9 +6,9 @@ import (
 
 func TestMarshalAndUnmarshal(t *testing.T) {
 	connReq := ConnectionRequest{
-		Data:       "Some Data",
-		ImporterID: "123",
-		ExporterID: "456",
+		Data:     "Some Data",
+		ClientID: "123",
+		ServerID: "456",
 	}
 
 	// Test ToJSON
@@ -26,17 +26,17 @@ func TestMarshalAndUnmarshal(t *testing.T) {
 
 	// Compare original and unmarshaled structs
 	if connReq.Data != unmarshaledConnReq.Data ||
-		connReq.ImporterID != unmarshaledConnReq.ImporterID ||
-		connReq.ExporterID != unmarshaledConnReq.ExporterID {
+		connReq.ClientID != unmarshaledConnReq.ClientID ||
+		connReq.ServerID != unmarshaledConnReq.ServerID {
 		t.Errorf("Original and unmarshaled structs are not equal")
 	}
 }
 
 func TestMarshalToSSEEvent(t *testing.T) {
 	connReq := ConnectionRequest{
-		Data:       "Some Data",
-		ImporterID: "123",
-		ExporterID: "456",
+		Data:     "Some Data",
+		ClientID: "123",
+		ServerID: "456",
 	}
 
 	// Test MarshalToSSEEvent
@@ -45,14 +45,14 @@ func TestMarshalToSSEEvent(t *testing.T) {
 		t.Errorf("Error marshaling to SSE event: %v", err)
 	}
 
-	expectedSSEEvent := "event: connection\nData: {\"Data\":\"Some Data\",\"ImporterID\":\"123\",\"ExporterID\":\"456\"}\n\n"
+	expectedSSEEvent := "event: connection\nData: {\"Data\":\"Some Data\",\"ClientID\":\"123\",\"ServerID\":\"456\"}\n\n"
 	if sseEvent != expectedSSEEvent {
 		t.Errorf("Unexpected SSE event string:\nExpected: %s\nActual:   %s", expectedSSEEvent, sseEvent)
 	}
 }
 
 func TestUnmarshalFromSSEEvent(t *testing.T) {
-	sseEvent := "event: connection\nData: {\"Data\":\"Some Data\",\"ImporterID\":\"123\",\"ExporterID\":\"456\"}\n\n"
+	sseEvent := "event: connection\nData: {\"Data\":\"Some Data\",\"ClientID\":\"123\",\"ServerID\":\"456\"}\n\n"
 
 	// Test UnmarshalFromSSEEvent
 	connReq, err := UnmarshalFromSSEEvent(sseEvent)
@@ -61,9 +61,9 @@ func TestUnmarshalFromSSEEvent(t *testing.T) {
 	}
 
 	expectedConnReq := &ConnectionRequest{
-		Data:       "Some Data",
-		ImporterID: "123",
-		ExporterID: "456",
+		Data:     "Some Data",
+		ClientID: "123",
+		ServerID: "456",
 	}
 	if *connReq != *expectedConnReq {
 		t.Errorf("Unexpected ConnectionRequest:\nExpected: %+v\nActual:   %+v", expectedConnReq, connReq)

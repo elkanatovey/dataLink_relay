@@ -6,7 +6,7 @@
 //    1) Server wishing to export connects with a call to HandleServerLongTermConnection. This is a long term connection back to the exporter
 //    2) Client wishing to import connects via  a call to HandleClientConnection
 //    3) Relay initiates a callback via persistent connection to exporter requesting a callback
-//    4) Exporter calls back, exporter and importer sockets are connected
+//    4) ListeningServer calls back, exporter and importer sockets are connected
 //@todo support mtls
 
 package relay
@@ -27,27 +27,27 @@ type Relay struct {
 	logger *logrus.Entry
 }
 
-// StateManager represents a db of exporters and importers waiting to connect
+// StateManager represents a db of listeningServers and connectingClients waiting to connect
 type StateManager interface {
-	AddExporter(expID string, exp *Exporter)
-	RemoveExporter(expID string)
-	NotifyExporter(expID string, msg *ImporterData) error
-	AddImporter(impID string, imp *Importer)
-	RemoveImporter(impID string)
-	NotifyImporter(impID string, connection *ServerConn) error
+	AddListeningServer(expID string, exp *ListeningServer)
+	RemoveListeningServer(expID string)
+	NotifyListeningServer(expID string, msg *ClientData) error
+	AddConnectingClient(impID string, imp *ConnectingClient)
+	RemoveConnectingClient(impID string)
+	NotifyConnectingClient(impID string, connection *ServerConn) error
 }
 
-// RelayData contains dbs of exporters advertising services and importers waiting for callback connections
+// RelayData contains dbs of listeningServers advertising services and connectingClients waiting for callback connections
 type RelayData struct {
-	*ExporterDB
-	*ImporterDB
+	*ListeningServerDB
+	*ConnectingClientDB
 	logger *logrus.Entry
 }
 
 func initRelayData() *RelayData {
 	return &RelayData{
-		InitExporterDB(),
-		InitImporterDB(),
+		InitListeningServerDB(),
+		InitConnectingClientDB(),
 		logrus.WithField("component", "relaydata"),
 	}
 }
@@ -72,7 +72,7 @@ func registerHandlers(relayState *RelayData) *http.ServeMux {
 	return mux
 }
 
-// HandleServerLongTermConnection maintains a persistent connection on behalf of an Exporter and passes connection
+// HandleServerLongTermConnection maintains a persistent connection on behalf of an ListeningServer and passes connection
 // requests back to the underlying ExportingServer when received
 func HandleServerLongTermConnection(relayState *RelayData) http.HandlerFunc {
 
@@ -88,7 +88,7 @@ func HandleServerLongTermConnection(relayState *RelayData) http.HandlerFunc {
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("Connection", "keep-alive")
 
-		var req api.ExporterAnnouncement
+		var req api.ListenRequest
 		err := json.NewDecoder(r.Body).Decode(&req)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -97,23 +97,23 @@ func HandleServerLongTermConnection(relayState *RelayData) http.HandlerFunc {
 		}
 
 		// Get the exporterID
-		exporterID := req.ExporterID
+		exporterID := req.ServerID
 		if exporterID == "" {
 			http.Error(w, "Please specify an exporter name!", http.StatusInternalServerError)
 			relayState.logger.Errorln("exporter name not specified")
 			return
 		}
 
-		relayState.logger.Infof("listening exporter: %s", req.ExporterID)
-		//allow importers to listenRequest this service
-		connectionRequests := InitExporter(r.Context())
-		relayState.AddExporter(exporterID, connectionRequests)
+		relayState.logger.Infof("listening exporter: %s", req.ServerID)
+		//allow connectingClients to listenRequest this service
+		connectionRequests := InitListeningServer(r.Context())
+		relayState.AddListeningServer(exporterID, connectionRequests)
 
 		go func() {
 			<-r.Context().Done()
-			relayState.RemoveExporter(exporterID)
-			relayState.logger.Infof(" exporter %s stopped listening", req.ExporterID)
-			for connectionRequest := range connectionRequests.exporterNotificationCh {
+			relayState.RemoveListeningServer(exporterID)
+			relayState.logger.Infof(" exporter %s stopped listening", req.ServerID)
+			for connectionRequest := range connectionRequests.serverNotificationCh {
 				connectionRequest.resultNotificationCh <- api.ForwardingSuccessNotification{api.NoteServerConnLost, nil}
 			}
 
@@ -122,7 +122,7 @@ func HandleServerLongTermConnection(relayState *RelayData) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 		flusher.Flush()
 
-		for importer := range connectionRequests.exporterNotificationCh {
+		for importer := range connectionRequests.serverNotificationCh {
 			event, err := api.MarshalToSSEEvent(&importer.msg)
 			if err != nil {
 				relayState.logger.Errorln(err)
@@ -139,13 +139,11 @@ func HandleServerLongTermConnection(relayState *RelayData) http.HandlerFunc {
 			importer.resultNotificationCh <- api.ForwardingSuccessNotification{api.NotePassed, nil}
 		}
 
-		fmt.Printf("server: %s /\n", r.Method)
-
 	}
 }
 
-// HandleClientConnection passes a ConnectionRequest to a waiting Exporter and waits for a socket to be received
-// from a callback connection with which to connect an Importer connection
+// HandleClientConnection passes a ConnectionRequest to a waiting ListeningServer and waits for a socket to be received
+// from a callback connection with which to connect an ConnectingClient connection
 func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var cr api.ConnectionRequest
@@ -157,12 +155,12 @@ func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 			return
 		}
 
-		imd := InitImporterData(cr)
+		imd := InitClientData(cr)
 
-		err = relayState.NotifyExporter(cr.ExporterID, imd)
+		err = relayState.NotifyListeningServer(cr.ServerID, imd)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusNotFound)
-			relayState.logger.Errorln(err, " notifyexporter failed")
+			relayState.logger.Errorln(err, " notifyListeningServer failed")
 			return
 		}
 
@@ -171,12 +169,12 @@ func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 			http.Error(w, res.Error.Error(), http.StatusBadRequest)
 			return
 		}
-		imp := InitImporter(r.Context())
+		imp := InitConnectingClient(r.Context())
 
-		relayState.AddImporter(getWaitingImporterId(cr), imp)
+		relayState.AddConnectingClient(getWaitingClientId(cr), imp)
 		go func() { //@todo the relay in principle allows other server attempts befpre return, should handle?
 			<-r.Context().Done()
-			relayState.RemoveImporter(getWaitingImporterId(cr))
+			relayState.RemoveConnectingClient(getWaitingClientId(cr))
 		}()
 
 		serverConn := <-imp.sockPassCh //@todo need to deal with timeout here
@@ -214,14 +212,14 @@ func HandleServerCallBackConnection(relayState *RelayData) http.HandlerFunc {
 			return
 		}
 
-		if ca.ExporterID == "" {
-			http.Error(w, "Please specify an exporter name!", http.StatusInternalServerError)
-			relayState.logger.Errorln("exporter name not specified")
+		if ca.ServerID == "" {
+			http.Error(w, "Please specify a server name!", http.StatusInternalServerError)
+			relayState.logger.Errorln("server name not specified")
 			return
 		}
-		if ca.ImporterID == "" {
-			http.Error(w, "Please specify an importer name!", http.StatusInternalServerError)
-			relayState.logger.Errorln("importer name not specified")
+		if ca.ClientID == "" {
+			http.Error(w, "Please specify a client name!", http.StatusInternalServerError)
+			relayState.logger.Errorln("client name not specified")
 			return
 		}
 
@@ -229,30 +227,21 @@ func HandleServerCallBackConnection(relayState *RelayData) http.HandlerFunc {
 		conn := hijackConn(w)
 		err = nil
 		if conn == nil {
-			relayState.logger.Errorln("server does not support hijacking") //@todo should we notify the importer?
-			err = errors.New("unsuccesful server connect")
+			relayState.logger.Errorln("relay does not support hijacking") //@todo should we notify the importer?
+			err = errors.New("unsuccessful server connect")
 		}
 
 		cn := &ServerConn{conn, err}
 
-		err = relayState.NotifyImporter(getCallingExporterId(ca), cn)
+		err = relayState.NotifyConnectingClient(getCallingServerId(ca), cn)
 		if err != nil {
 			relayState.logger.Errorln(err)
 		}
 
 		return
 	}
-	//get client id
-	//get socket from db according to id
-	//connect sockets
-
-	//fmt.Printf("servercallback: %s /\n", r.Method)
 }
 
 // proxy via which server and client connect
 
 func MaintainConnection() int { return 1 }
-
-// func ServerConnect() int { return 1 }
-
-// func ClientConnect() int { return 1 }

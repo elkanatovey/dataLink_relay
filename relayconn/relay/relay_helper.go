@@ -10,14 +10,14 @@ import (
 	"net/http"
 )
 
-// getWaitingImporterId calculates the id of a waiting request based on relevant importer/exporter ids
-func getWaitingImporterId(cr api.ConnectionRequest) string {
-	return cr.ImporterID + cr.ExporterID
+// getWaitingClientId calculates the id of a waiting request based on relevant client/server ids
+func getWaitingClientId(cr api.ConnectionRequest) string {
+	return cr.ClientID + cr.ServerID
 }
 
-// getCallingExporterId calculates the id of a callback response based on relevant importer/exporter ids
-func getCallingExporterId(ca api.ConnectionAccept) string {
-	return ca.ImporterID + ca.ExporterID
+// getCallingServerId calculates the id of a callback response based on relevant client/server ids
+func getCallingServerId(ca api.ConnectionAccept) string {
+	return ca.ClientID + ca.ServerID
 }
 
 // Hijack the HTTP connection and use the TCP session
@@ -35,32 +35,32 @@ func hijackConn(w http.ResponseWriter) net.Conn {
 }
 
 // uniteConnections glues an importer connection with an exporter connection
-func uniteConnections(importerConn net.Conn, exporterConn net.Conn) error {
+func uniteConnections(clientConn net.Conn, serverConn net.Conn) error {
 
 	var eg errgroup.Group
-	fmt.Printf("uniteconn ")
+	//fmt.Printf("uniteconn ")
 
 	eg.Go(func() error {
-		defer importerConn.Close()
-		defer exporterConn.Close()
+		defer clientConn.Close()
+		defer serverConn.Close()
 
-		nb, err := io.Copy(exporterConn, importerConn)
-		fmt.Printf("server written bytes %s \n", nb)
+		_, err := io.Copy(serverConn, clientConn)
+		//fmt.Printf("server written bytes %s \n", nb)
 		if err != nil && !errors.Is(err, net.ErrClosed) {
-			return fmt.Errorf("exporter->importer: %w", err)
+			return fmt.Errorf("server->client: %w", err)
 		}
 
 		return nil
 	})
 
 	eg.Go(func() error {
-		defer importerConn.Close()
-		defer exporterConn.Close()
+		defer clientConn.Close()
+		defer serverConn.Close()
 
-		cnb, err := io.Copy(importerConn, exporterConn)
-		fmt.Printf("client written bytes %s \n", cnb)
+		_, err := io.Copy(clientConn, serverConn)
+		//fmt.Printf("client written bytes %s \n", cnb)
 		if err != nil && !errors.Is(err, net.ErrClosed) {
-			return fmt.Errorf("importer->exporter: %w", err)
+			return fmt.Errorf("client->server: %w", err)
 		}
 
 		return nil

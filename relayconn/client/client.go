@@ -10,12 +10,12 @@ import (
 )
 
 // DialTCP dials an exporter via the relay at the given ip
-func DialTCP(relayIP string, importerName string, exporterName string) (net.Conn, error) {
+func DialTCP(relayIP string, clientName string, serverName string) (net.Conn, error) {
 	logger := logrus.WithField("component", "importingclient")
-	logger.Infof("Starting TCP Connect Request to exporter id %v via relay ip %v", exporterName, relayIP)
+	logger.Infof("Starting TCP Connect Request to exporter id %v via relay ip %v", serverName, relayIP)
 	url := api.TCP + relayIP + api.Dial
 
-	jsonData, err := json.Marshal(api.ConnectionRequest{ImporterID: importerName, ExporterID: exporterName})
+	jsonData, err := json.Marshal(api.ConnectionRequest{ClientID: clientName, ServerID: serverName})
 	if err != nil {
 		logger.Errorln(err)
 		return nil, err

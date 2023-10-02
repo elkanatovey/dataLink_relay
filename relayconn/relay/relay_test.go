@@ -27,7 +27,7 @@ func TestHandleServerLongTermConnection(t *testing.T) {
 	mockDB := initRelayData()
 	handler := HandleServerLongTermConnection(mockDB)
 
-	reqBody := api.ExporterAnnouncement{ExporterID: "123"}
+	reqBody := api.ListenRequest{ServerID: "123"}
 
 	reqBodyBytes, _ := json.Marshal(reqBody)
 
@@ -60,11 +60,11 @@ func TestHandleServerLongTermConnection(t *testing.T) {
 
 	// Simulate SSE messages
 	connReq := api.ConnectionRequest{
-		Data:       "Some data",
-		ImporterID: "123",
-		ExporterID: "456",
+		Data:     "Some data",
+		ClientID: "123",
+		ServerID: "456",
 	}
-	err = mockDB.NotifyExporter("123", InitImporterData(connReq))
+	err = mockDB.NotifyListeningServer("123", InitClientData(connReq))
 	if err != nil {
 		return
 	}

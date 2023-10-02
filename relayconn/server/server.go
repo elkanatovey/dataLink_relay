@@ -13,20 +13,21 @@ import (
 	"net/http"
 )
 
-// ExportingServer exports services via relay
+// ExportingServer is a server side representation of a server listening for incoming connections via a relay.
+// It exports services via relay
 type ExportingServer struct {
 	Connection    *http.Client
-	RelayURL      string // address of relay + port
-	ExporterID    string
+	RelayIPPort   string // ip of relay + port for example: 127.0.0.1:39887
+	ServerID      string
 	maxBufferSize int
 	logger        *logrus.Entry
 }
 
 // NewExportingServer creates a new ExportingServer
-func NewExportingServer(url string, id string, opts ...func(c *ExportingServer)) *ExportingServer {
+func NewExportingServer(relayAddr string, id string, opts ...func(c *ExportingServer)) *ExportingServer {
 	s := &ExportingServer{
-		RelayURL:      url,
-		ExporterID:    id,
+		RelayIPPort:   relayAddr,
+		ServerID:      id,
 		Connection:    &http.Client{},
 		maxBufferSize: 1 << 16,
 		logger:        logrus.WithField("component", "exportingserver"),
@@ -37,16 +38,6 @@ func NewExportingServer(url string, id string, opts ...func(c *ExportingServer))
 	}
 
 	return s
-}
-
-func (s *ExportingServer) AcceptConnection(ctx context.Context, cr *api.ConnectionRequest) (net.Conn, error) {
-
-	//create request
-
-	//run request
-	// capture socket and pass back
-
-	return nil, nil
 }
 
 // AdvertiseService maintains the persistent connection through which clients send connection requests,
@@ -88,7 +79,7 @@ func (s *ExportingServer) AdvertiseService(ctx context.Context, handlingCH chan 
 					return
 				}
 				//sendoff to be handled
-				s.logger.Infof("received connection request from: %s", event.ImporterID)
+				s.logger.Infof("received connection request from: %s", event.ClientID)
 				handlingCH <- event
 			}
 
@@ -110,10 +101,10 @@ func (s *ExportingServer) listenRequest(ctx context.Context) (*http.Response, er
 
 // createListenRequest builds the request to open the listen connection for the server
 func (s *ExportingServer) createListenRequest(ctx context.Context) (*http.Request, error) {
-	reqBody := api.ExporterAnnouncement{ExporterID: s.ExporterID}
+	reqBody := api.ListenRequest{ServerID: s.ServerID}
 	reqBodyBytes, _ := json.Marshal(reqBody)
 
-	req, err := http.NewRequest("POST", api.TCP+s.RelayURL+api.Listen, bytes.NewReader(reqBodyBytes)) //@todo should we cancel context in case of error?
+	req, err := http.NewRequest("POST", api.TCP+s.RelayIPPort+api.Listen, bytes.NewReader(reqBodyBytes)) //@todo should we cancel context in case of error?
 	if err != nil {
 		return nil, err
 	}
@@ -127,16 +118,16 @@ func (s *ExportingServer) createListenRequest(ctx context.Context) (*http.Reques
 
 // TCPCallbackReq calls back an importer via the relay at the given ip
 func (s *ExportingServer) TCPCallbackReq(importerName string) (net.Conn, error) {
-	s.logger.Infof("Starting TCP callback to importer id %v via relay ip %v", importerName, s.RelayURL)
-	url := api.TCP + s.RelayURL + api.Accept
+	s.logger.Infof("Starting TCP callback to importer id %v via relay ip %v", importerName, s.RelayIPPort)
+	url := api.TCP + s.RelayIPPort + api.Accept
 
-	jsonData, err := json.Marshal(api.ConnectionAccept{ImporterID: importerName, ExporterID: s.ExporterID})
+	jsonData, err := json.Marshal(api.ConnectionAccept{ClientID: importerName, ServerID: s.ServerID})
 	if err != nil {
 		s.logger.Errorln(err)
 		return nil, err
 	}
 
-	conn, resp := httputils.Connect(s.RelayURL, url, string(jsonData))
+	conn, resp := httputils.Connect(s.RelayIPPort, url, string(jsonData))
 	if resp == nil {
 		s.logger.Infof("Successfully Connected")
 		return conn, nil
@@ -144,9 +135,4 @@ func (s *ExportingServer) TCPCallbackReq(importerName string) (net.Conn, error) 
 
 	s.logger.Errorf("callback Request Failed")
 	return nil, fmt.Errorf("callback Request Failed")
-}
-
-func (s *ExportingServer) runServer() error {
-
-	return nil
 }

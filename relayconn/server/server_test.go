@@ -14,15 +14,15 @@ var relayServer *httptest.Server
 
 var exporterName = "foobar"
 var connReq1 = api.ConnectionRequest{
-	Data:       "Some data",
-	ImporterID: "imp1",
-	ExporterID: exporterName,
+	Data:     "Some data",
+	ClientID: "imp1",
+	ServerID: exporterName,
 }
 
 var connReq2 = api.ConnectionRequest{
-	Data:       "Some data",
-	ImporterID: "imp2",
-	ExporterID: exporterName,
+	Data:     "Some data",
+	ClientID: "imp2",
+	ServerID: exporterName,
 }
 
 func TestExportingServer_AdvertiseService(t *testing.T) {
@@ -34,7 +34,7 @@ func TestExportingServer_AdvertiseService(t *testing.T) {
 	r := relay.NewRelay()
 	relayServer = httptest.NewServer(r.Mux)
 
-	exportingServer := NewExportingServer(relayServer.URL, exporterName)
+	exportingServer := NewExportingServer(relayServer.Listener.Addr().String(), exporterName)
 
 	// channel to receive connrequests
 	handlingChennel := make(chan *api.ConnectionRequest, 100)
@@ -50,12 +50,12 @@ func TestExportingServer_AdvertiseService(t *testing.T) {
 	time.Sleep(1000 * time.Millisecond)
 
 	// notify exporter on relay end
-	err = r.Data.NotifyExporter(connReq1.ExporterID, relay.InitImporterData(connReq1))
+	err = r.Data.NotifyListeningServer(connReq1.ServerID, relay.InitClientData(connReq1))
 	if err != nil {
 		t.Errorf(err.Error())
 		t.Errorf("connreq1 fail")
 	}
-	err = r.Data.NotifyExporter(connReq2.ExporterID, relay.InitImporterData(connReq2))
+	err = r.Data.NotifyListeningServer(connReq2.ServerID, relay.InitClientData(connReq2))
 	if err != nil {
 		t.Errorf(err.Error())
 		t.Errorf("connreq2 fail")
