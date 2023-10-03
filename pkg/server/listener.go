@@ -3,8 +3,8 @@ package server
 import (
 	"context"
 	"errors"
+	"github.ibm.com/mcnet-research/mbg_relay/pkg/api"
 	"io"
-	"mbg-relay/pkg/api"
 	"net"
 )
 

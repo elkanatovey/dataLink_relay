@@ -1,7 +1,7 @@
 package relay
 
 import (
-	"mbg-relay/pkg/api"
+	"github.ibm.com/mcnet-research/mbg_relay/pkg/api"
 
 	//"testing"
 

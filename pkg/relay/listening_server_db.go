@@ -6,7 +6,7 @@ package relay
 import (
 	"context"
 	"errors"
-	"mbg-relay/pkg/api"
+	"github.ibm.com/mcnet-research/mbg_relay/pkg/api"
 	"sync"
 )
 

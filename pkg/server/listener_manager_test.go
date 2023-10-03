@@ -3,9 +3,9 @@ package server
 import (
 	"context"
 	"errors"
+	"github.ibm.com/mcnet-research/mbg_relay/pkg/api"
+	"github.ibm.com/mcnet-research/mbg_relay/pkg/relay"
 	"io"
-	"mbg-relay/pkg/api"
-	"mbg-relay/pkg/relay"
 	"net/http/httptest"
 	"testing"
 	"time"

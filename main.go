@@ -3,15 +3,15 @@ package main
 import (
 	"context"
 	"errors"
-	"mbg-relay/pkg/client"
-	"mbg-relay/pkg/utils/logutils"
+	"github.ibm.com/mcnet-research/mbg_relay/pkg/client"
+	"github.ibm.com/mcnet-research/mbg_relay/pkg/utils/logutils"
 	"net"
 	//"os"
 	"strconv"
 	"time"
 
-	"mbg-relay/pkg/relay"
-	"mbg-relay/pkg/server"
+	"github.ibm.com/mcnet-research/mbg_relay/pkg/relay"
+	"github.ibm.com/mcnet-research/mbg_relay/pkg/server"
 
 	"net/http"
 

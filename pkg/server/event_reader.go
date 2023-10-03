@@ -8,8 +8,8 @@ import (
 	"context"
 	"errors"
 	"github.com/sirupsen/logrus"
+	"github.ibm.com/mcnet-research/mbg_relay/pkg/api"
 	"io"
-	"mbg-relay/pkg/api"
 )
 
 // eventStreamReader scans an io.Reader looking for EventStream messages.

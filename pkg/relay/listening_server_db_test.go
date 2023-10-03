@@ -2,7 +2,7 @@ package relay
 
 import (
 	"context"
-	"mbg-relay/pkg/api"
+	"github.ibm.com/mcnet-research/mbg_relay/pkg/api"
 	"sync"
 	"testing"
 )

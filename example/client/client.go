@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"mbg-relay/example"
-	"mbg-relay/pkg/client"
-	"mbg-relay/pkg/utils/logutils"
+	"github.ibm.com/mcnet-research/mbg_relay/example"
+	"github.ibm.com/mcnet-research/mbg_relay/pkg/client"
+	"github.ibm.com/mcnet-research/mbg_relay/pkg/utils/logutils"
 	"os"
 )
 

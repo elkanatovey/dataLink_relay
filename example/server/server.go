@@ -3,9 +3,9 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"mbg-relay/example"
-	"mbg-relay/pkg/server"
-	"mbg-relay/pkg/utils/logutils"
+	"github.ibm.com/mcnet-research/mbg_relay/example"
+	"github.ibm.com/mcnet-research/mbg_relay/pkg/server"
+	"github.ibm.com/mcnet-research/mbg_relay/pkg/utils/logutils"
 	"net"
 	"os"
 	"strings"
