@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"github.ibm.com/mcnet-research/mbg_relay/example"
 	"github.ibm.com/mcnet-research/mbg_relay/pkg/client"
@@ -19,20 +20,24 @@ func main() {
 	}
 
 	defer conn.Close()
+	reader := bufio.NewReader(os.Stdin)
 
 	for {
 		// Read user input from the terminal.
 		fmt.Print("Enter a message (or 'exit' to quit): ")
-		var userInput string
-		fmt.Scanln(&userInput)
+		userInput, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("Error reading input:", err)
+			return
+		}
 
-		if userInput == "exit" {
+		if userInput == "exit\n" {
 			fmt.Println("Exiting client.")
 			return
 		}
 
 		// Send the user's input to the server.
-		_, err := conn.Write([]byte(userInput + "\n"))
+		_, err = conn.Write([]byte(userInput))
 		if err != nil {
 			fmt.Println("Error sending data:", err)
 			return

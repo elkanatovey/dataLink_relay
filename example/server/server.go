@@ -6,6 +6,7 @@ import (
 	"github.ibm.com/mcnet-research/mbg_relay/example"
 	"github.ibm.com/mcnet-research/mbg_relay/pkg/server"
 	"github.ibm.com/mcnet-research/mbg_relay/pkg/utils/logutils"
+	//"io"
 	"net"
 	"os"
 	"strings"
@@ -16,7 +17,13 @@ func handleConnection(conn net.Conn) {
 
 	fmt.Printf("Accepted connection from %s\n", conn.RemoteAddr())
 
-	// Create a buffered reader to read messages from the client.
+	//// Create a buffered reader to read messages from the client.
+	//_, err := io.Copy(conn, conn)
+	//if err != nil {
+	//	fmt.Println("Error writing to connection:", err)
+	//	return
+	//}
+
 	reader := bufio.NewReader(conn)
 
 	for {
