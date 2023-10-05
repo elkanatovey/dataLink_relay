@@ -35,7 +35,7 @@ func TestListenerManager_listenInternal(t *testing.T) {
 	r := relay.NewRelay()
 	relayServer = httptest.NewServer(r.Mux)
 
-	exportingServer := newListenerManager(relayServer.Listener.Addr().String(), exporterName)
+	exportingServer := newListenerManager(relayServer.Listener.Addr().String())
 
 	// channel to receive connrequests
 	handlingChennel := make(chan struct {
@@ -47,7 +47,7 @@ func TestListenerManager_listenInternal(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background()) // need to add  sse events to server to send + spin up gouroutine for export logic
 
 	//advertise
-	err := exportingServer.listenInternal(ctx, handlingChennel, errChan)
+	err := exportingServer.listenInternal(ctx, handlingChennel, errChan, exporterName)
 	if err != nil {
 		t.Errorf(err.Error())
 		t.Errorf("connreq1 fail")

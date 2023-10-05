@@ -38,7 +38,7 @@ func Listen(relayURL string, listenerID string, config *tls.Config) (net.Listene
 		config.GetCertificate == nil && config.GetConfigForClient == nil {
 		return nil, errors.New("tls: neither Certificates, GetCertificate, nor GetConfigForClient set in Config")
 	}
-	l, err := tcp_endpoints.Listen(relayURL, listenerID)
+	l, err := tcp_endpoints.ListenRelay(relayURL, listenerID)
 	if err != nil {
 		return nil, err
 	}

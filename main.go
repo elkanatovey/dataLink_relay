@@ -85,7 +85,7 @@ func main() {
 	time.Sleep(1000 * time.Millisecond)
 
 	//start tcp_endpoints
-	listener, err := tcp_endpoints.Listen(relayAddress, ServerName)
+	listener, err := tcp_endpoints.ListenRelay(relayAddress, ServerName)
 	if err != nil {
 		return
 	}

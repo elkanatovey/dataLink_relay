@@ -18,7 +18,9 @@ type RelayListener struct {
 		error
 	}
 	reqErrCh      chan error
+	ctx           context.Context
 	closeListener context.CancelCauseFunc //calling this CancelFunc will close the persistent connection maintained by listen_internal()
+	address       RelayAddress
 }
 
 // Accept return an error if the listener closed. The first error returned is the reason for closing,
@@ -33,7 +35,7 @@ func (r RelayListener) Accept() (net.Conn, error) {
 	if req.ConnectionRequest == nil && req.error == nil {
 		return nil, net.ErrClosed
 	}
-	return r.manager.internalTCPCallbackReq(req.ClientID)
+	return r.manager.internalTCPCallbackReq(req.ClientID, r.Addr().String())
 
 }
 
@@ -57,26 +59,61 @@ func (r RelayListener) Close() error {
 }
 
 func (r RelayListener) Addr() net.Addr { //what should go here?
-	a := net.Dialer{}
-	return a.LocalAddr
+	return r.address
 }
 
-func Listen(relayURL string, listenerID string) (net.Listener, error) {
+func (r RelayListener) Listen(network, address string) (net.Listener, error) {
+	if network != "tcp" {
+		panic("we only support tcp")
+	}
+
+	err := r.manager.listenInternal(r.ctx, r.reqHandlingCh, r.reqErrCh, address)
+	if err != nil {
+		return nil, err
+	}
+
+	return r, err
+}
+
+func NewRelayListener(relayURL string, listenerAddress string) RelayListener {
 	ctx, cancel := context.WithCancelCause(context.Background())
 
 	listener := RelayListener{
-		newListenerManager(relayURL, listenerID),
+		newListenerManager(relayURL),
 		make(chan struct {
 			*api.ConnectionRequest
 			error
 		}, bufferSize),
 		make(chan error, 1),
+		ctx,
 		cancel,
+		RelayAddress{listenerAddress},
 	}
-	err := listener.manager.listenInternal(ctx, listener.reqHandlingCh, listener.reqErrCh)
+	return listener
+}
+
+func ListenRelay(relayURL string, listenerID string) (net.Listener, error) {
+	l := NewRelayListener(relayURL, listenerID)
+
+	err := l.manager.listenInternal(l.ctx, l.reqHandlingCh, l.reqErrCh, listenerID)
 	if err != nil {
 		return nil, err
 	}
 
-	return listener, err
+	return l, err
+}
+
+// RelayAddress represents the address that a RelayListener is listening on. To connect to a RelayListener the
+// ServerID field of an api.ConnectionRequest should be the same as the name field here
+type RelayAddress struct {
+	Name string
+}
+
+func (r RelayAddress) Network() string {
+	return "tcp"
+}
+
+// String is the address that a RelayListener is listening on
+func (r RelayAddress) String() string {
+	return r.Name
 }

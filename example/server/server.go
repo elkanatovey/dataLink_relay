@@ -51,7 +51,7 @@ func main() {
 	logutils.SetLogStyle()
 	relayAddress := fmt.Sprintf("localhost:%d", example.ServerPort)
 
-	listener, err := tcp_endpoints.Listen(relayAddress, example.ExporterName)
+	listener, err := tcp_endpoints.ListenRelay(relayAddress, example.ExporterName)
 	if err != nil {
 		return
 	}

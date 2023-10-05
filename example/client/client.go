@@ -51,7 +51,7 @@ func main() {
 			return
 		}
 
-		fmt.Printf("Received from tcp_endpoints: %s", response[:n])
+		fmt.Printf("Received from server: %s", response[:n])
 	}
 
 }

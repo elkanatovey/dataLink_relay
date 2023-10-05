@@ -23,10 +23,9 @@ type listenerManager struct {
 }
 
 // newListenerManager creates a new listenerManager
-func newListenerManager(relayAddr string, id string) *listenerManager {
+func newListenerManager(relayAddr string) *listenerManager {
 	s := &listenerManager{
 		RelayIPPort:   relayAddr,
-		ServerID:      id,
 		Connection:    &http.Client{},
 		maxBufferSize: 1 << 16,
 		logger:        logrus.WithField("component", "exportingserver"),
@@ -41,9 +40,9 @@ func (s *listenerManager) listenInternal(ctx context.Context, handlingCH chan st
 	*api.ConnectionRequest
 	error
 },
-	errCH chan error) error {
+	errCH chan error, address string) error {
 
-	resp, err := s.listenRequest(ctx)
+	resp, err := s.listenRequest(ctx, address)
 	if err != nil {
 		s.logger.Errorln(err)
 		return err
@@ -98,9 +97,9 @@ func (s *listenerManager) listenInternal(ctx context.Context, handlingCH chan st
 }
 
 // listenRequest opens the connection to the relay after building the connection request
-func (s *listenerManager) listenRequest(ctx context.Context) (*http.Response, error) {
+func (s *listenerManager) listenRequest(ctx context.Context, address string) (*http.Response, error) {
 
-	req, err := s.createListenRequest(ctx)
+	req, err := s.createListenRequest(ctx, address)
 	if err != nil {
 		return nil, err
 	}
@@ -108,8 +107,8 @@ func (s *listenerManager) listenRequest(ctx context.Context) (*http.Response, er
 }
 
 // createListenRequest builds the request to open the listen connection for the server
-func (s *listenerManager) createListenRequest(ctx context.Context) (*http.Request, error) {
-	reqBody := api.ListenRequest{ServerID: s.ServerID}
+func (s *listenerManager) createListenRequest(ctx context.Context, address string) (*http.Request, error) {
+	reqBody := api.ListenRequest{ServerID: address}
 	reqBodyBytes, _ := json.Marshal(reqBody)
 
 	req, err := http.NewRequest("POST", api.TCP+s.RelayIPPort+api.Listen, bytes.NewReader(reqBodyBytes)) //@todo should we cancel context in case of error?
@@ -125,11 +124,11 @@ func (s *listenerManager) createListenRequest(ctx context.Context) (*http.Reques
 }
 
 // internalTCPCallbackReq calls back a client via the relay at the given ip
-func (s *listenerManager) internalTCPCallbackReq(importerName string) (net.Conn, error) {
+func (s *listenerManager) internalTCPCallbackReq(importerName string, address string) (net.Conn, error) {
 	s.logger.Infof("Starting TCP callback to importer id %v via relay ip %v", importerName, s.RelayIPPort)
 	url := api.TCP + s.RelayIPPort + api.Accept
 
-	jsonData, err := json.Marshal(api.ConnectionAccept{ClientID: importerName, ServerID: s.ServerID})
+	jsonData, err := json.Marshal(api.ConnectionAccept{ClientID: importerName, ServerID: address})
 	if err != nil {
 		s.logger.Errorln(err)
 		return nil, err
