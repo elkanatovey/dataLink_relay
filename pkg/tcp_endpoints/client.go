@@ -9,6 +9,20 @@ import (
 	"net"
 )
 
+// RelayDialer connects to a server via a relay
+type RelayDialer struct {
+	relayIP  string
+	clientID string
+}
+
+// Dial fulfills the same api as net.Dial but does it's dial via a Relay who's IP is in the backing struct
+func (r RelayDialer) Dial(network, address string) (net.Conn, error) {
+	if network != "tcp" {
+		panic(" only tcp supported")
+	}
+	return DialTCP(r.relayIP, r.clientID, address)
+}
+
 // DialTCP dials a server via the relay at the given ip
 func DialTCP(relayIP string, clientName string, serverName string) (net.Conn, error) {
 	logger := logrus.WithField("component", "importingclient")
