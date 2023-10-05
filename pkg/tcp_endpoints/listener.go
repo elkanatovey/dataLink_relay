@@ -20,7 +20,7 @@ type RelayListener struct {
 	reqErrCh      chan error
 	ctx           context.Context
 	closeListener context.CancelCauseFunc //calling this CancelFunc will close the persistent connection maintained by listen_internal()
-	address       RelayAddress
+	address       ListenerAddress
 }
 
 // Accept return an error if the listener closed. The first error returned is the reason for closing,
@@ -75,27 +75,29 @@ func (r RelayListener) Listen(network, address string) (net.Listener, error) {
 	return r, err
 }
 
-func NewRelayListener(relayURL string, listenerAddress string) RelayListener {
+// NewRelayListener creates a RelayListener that implements the net.Listener api. To run the RelayListener call
+// RelayListener.Listen
+func NewRelayListener(relayURL string) RelayListener {
 	ctx, cancel := context.WithCancelCause(context.Background())
 
 	listener := RelayListener{
-		newListenerManager(relayURL),
-		make(chan struct {
+		manager: newListenerManager(relayURL),
+		reqHandlingCh: make(chan struct {
 			*api.ConnectionRequest
 			error
 		}, bufferSize),
-		make(chan error, 1),
-		ctx,
-		cancel,
-		RelayAddress{listenerAddress},
+		reqErrCh:      make(chan error, 1),
+		ctx:           ctx,
+		closeListener: cancel,
 	}
 	return listener
 }
 
-func ListenRelay(relayURL string, listenerID string) (net.Listener, error) {
-	l := NewRelayListener(relayURL, listenerID)
+// ListenRelay creates and starts a RelayListener
+func ListenRelay(relayURL string, listenerAddress string) (net.Listener, error) {
+	l := NewRelayListener(relayURL)
 
-	err := l.manager.listenInternal(l.ctx, l.reqHandlingCh, l.reqErrCh, listenerID)
+	err := l.manager.listenInternal(l.ctx, l.reqHandlingCh, l.reqErrCh, listenerAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -103,17 +105,20 @@ func ListenRelay(relayURL string, listenerID string) (net.Listener, error) {
 	return l, err
 }
 
-// RelayAddress represents the address that a RelayListener is listening on. To connect to a RelayListener the
+// ListenerAddress represents the address that a RelayListener is listening on. To connect to a RelayListener the
 // ServerID field of an api.ConnectionRequest should be the same as the name field here
-type RelayAddress struct {
+type ListenerAddress struct {
 	Name string
 }
 
-func (r RelayAddress) Network() string {
+func (r ListenerAddress) Network() string {
 	return "tcp"
 }
 
-// String is the address that a RelayListener is listening on
-func (r RelayAddress) String() string {
-	return r.Name
+// String is the address that a RelayListener is listening on. It panics of the RelayListener hasn't started listening
+func (r ListenerAddress) String() string {
+	if r.Name != "" {
+		return r.Name
+	}
+	panic("listener has not started listening")
 }

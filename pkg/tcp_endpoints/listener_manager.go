@@ -15,11 +15,12 @@ import (
 
 // listenerManager contains internal implementation details of a RelayListener's api
 type listenerManager struct {
-	Connection    *http.Client
-	RelayIPPort   string // ip of relay + port for example: 127.0.0.1:39887
-	ServerID      string
-	maxBufferSize int
-	logger        *logrus.Entry
+	Connection       *http.Client
+	RelayIPPort      string // ip of relay + port for example: 127.0.0.1:39887
+	ServerID         string
+	maxBufferSize    int
+	listeningAddress ListenerAddress
+	logger           *logrus.Entry
 }
 
 // newListenerManager creates a new listenerManager
@@ -35,12 +36,14 @@ func newListenerManager(relayAddr string) *listenerManager {
 }
 
 // listenInternal maintains the persistent connection through which clients send connection requests,
+// the listening address of the server is only set once it calls listenInternal
 // errors are propagated through the passed in channel, canceling the context will close both passed in channels
 func (s *listenerManager) listenInternal(ctx context.Context, handlingCH chan struct {
 	*api.ConnectionRequest
 	error
 },
 	errCH chan error, address string) error {
+	s.listeningAddress = ListenerAddress{address}
 
 	resp, err := s.listenRequest(ctx, address)
 	if err != nil {
