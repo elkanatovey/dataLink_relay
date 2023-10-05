@@ -1,4 +1,4 @@
-package server
+package tcp_endpoints
 
 // This code deals with reading ConnectionRequests at the server from a buffered stream
 

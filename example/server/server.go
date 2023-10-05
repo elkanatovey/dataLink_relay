@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.ibm.com/mcnet-research/mbg_relay/example"
-	"github.ibm.com/mcnet-research/mbg_relay/pkg/server"
+	"github.ibm.com/mcnet-research/mbg_relay/pkg/tcp_endpoints"
 	"github.ibm.com/mcnet-research/mbg_relay/pkg/utils/logutils"
 	//"io"
 	"net"
@@ -51,7 +51,7 @@ func main() {
 	logutils.SetLogStyle()
 	relayAddress := fmt.Sprintf("localhost:%d", example.ServerPort)
 
-	listener, err := server.Listen(relayAddress, example.ExporterName)
+	listener, err := tcp_endpoints.Listen(relayAddress, example.ExporterName)
 	if err != nil {
 		return
 	}

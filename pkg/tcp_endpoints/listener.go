@@ -1,4 +1,4 @@
-package server
+package tcp_endpoints
 
 import (
 	"context"
@@ -61,10 +61,10 @@ func (r RelayListener) Addr() net.Addr { //what should go here?
 	return a.LocalAddr
 }
 
-func Listen(relayURL string, listenerID string) (*RelayListener, error) {
+func Listen(relayURL string, listenerID string) (net.Listener, error) {
 	ctx, cancel := context.WithCancelCause(context.Background())
 
-	listener := &RelayListener{
+	listener := RelayListener{
 		newListenerManager(relayURL, listenerID),
 		make(chan struct {
 			*api.ConnectionRequest

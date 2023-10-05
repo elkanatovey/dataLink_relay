@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"github.ibm.com/mcnet-research/mbg_relay/pkg/client"
 	"github.ibm.com/mcnet-research/mbg_relay/pkg/utils/logutils"
 	"net"
 	//"os"
@@ -11,7 +10,7 @@ import (
 	"time"
 
 	"github.ibm.com/mcnet-research/mbg_relay/pkg/relay"
-	"github.ibm.com/mcnet-research/mbg_relay/pkg/server"
+	"github.ibm.com/mcnet-research/mbg_relay/pkg/tcp_endpoints"
 
 	"net/http"
 
@@ -33,7 +32,7 @@ func StartRelay() {
 	}
 	if err := untrustedRelay.ListenAndServe(); err != nil {
 		if !errors.Is(err, http.ErrServerClosed) {
-			fmt.Printf("error running http server: %s\n", err)
+			fmt.Printf("error running http tcp_endpoints: %s\n", err)
 		}
 	}
 }
@@ -85,8 +84,8 @@ func main() {
 	go StartRelay()
 	time.Sleep(1000 * time.Millisecond)
 
-	//start server
-	listener, err := server.Listen(relayAddress, ServerName)
+	//start tcp_endpoints
+	listener, err := tcp_endpoints.Listen(relayAddress, ServerName)
 	if err != nil {
 		return
 	}
@@ -94,11 +93,11 @@ func main() {
 	go AcceptConnections(listener)
 
 	for i := 1; i < 5; i++ {
-		conn, err := client.DialTCP(relayAddress, ClientName+string(rune(i)), ServerName)
+		conn, err := tcp_endpoints.DialTCP(relayAddress, ClientName+string(rune(i)), ServerName)
 		// Message to send
 		message := "Hello, server! from " + strconv.Itoa(i)
 
-		// Send the message to the server
+		// Send the message to the tcp_endpoints
 		_, err = conn.Write([]byte(message))
 		if err != nil {
 			fmt.Println("Error sending message:", err)

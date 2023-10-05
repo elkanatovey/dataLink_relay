@@ -1,4 +1,4 @@
-package client
+package tcp_endpoints
 
 import (
 	"encoding/json"

@@ -10,7 +10,7 @@ import (
 	"sync"
 )
 
-// ClientData contains a message for an server and channel for communicating back to the respective importer
+// ClientData contains a message for a server and channel for communicating back to the respective importer
 type ClientData struct {
 	msg                  api.ConnectionRequest                  // message for server
 	resultNotificationCh chan api.ForwardingSuccessNotification // report to importer routine if message was passed to server socket successfully @todo should this be bool?

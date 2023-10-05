@@ -18,7 +18,7 @@ func StartRelay() { //@todo currently incorrect
 	}
 	if err := untrustedRelay.ListenAndServe(); err != nil {
 		if !errors.Is(err, http.ErrServerClosed) {
-			fmt.Printf("error running http server: %s\n", err)
+			fmt.Printf("error running http tcp_endpoints: %s\n", err)
 		}
 	}
 }
