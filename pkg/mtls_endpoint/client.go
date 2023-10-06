@@ -28,7 +28,7 @@ func DialMTLS(network, address string, config *tls.Config, relayIP string, clien
 }
 
 func dial(ctx context.Context, relayIP string, clientName string, serverName string, config *tls.Config) (net.Conn, error) {
-	rawConn, err := tcp_endpoints.DialTCP(relayIP, clientName, serverName)
+	rawConn, err := tcp_endpoints.DialTCP("tcp", serverName, relayIP, clientName)
 	if err != nil {
 		return nil, err
 	}

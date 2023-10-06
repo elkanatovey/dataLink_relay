@@ -95,7 +95,7 @@ func main() {
 	go AcceptConnections(listener)
 
 	for i := 1; i < 5; i++ {
-		conn, err := tcp_endpoints.DialTCP(relayAddress, ClientName+string(rune(i)), ServerName)
+		conn, err := tcp_endpoints.DialTCP("tcp", ServerName, relayAddress, ClientName+string(rune(i)))
 		// Message to send
 		message := "Hello, server! from " + strconv.Itoa(i)
 

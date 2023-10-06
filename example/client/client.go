@@ -13,7 +13,7 @@ func main() {
 	logutils.SetLogStyle()
 	relayAddress := fmt.Sprintf("localhost:%d", example.ServerPort)
 
-	conn, err := tcp_endpoints.DialTCP(relayAddress, example.ImporterName, example.ExporterName)
+	conn, err := tcp_endpoints.DialTCP("tcp", example.ExporterName, relayAddress, example.ImporterName)
 	if err != nil {
 		fmt.Println("Error connecting to tcp_endpoints:", err)
 		os.Exit(1)

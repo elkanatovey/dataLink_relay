@@ -7,7 +7,6 @@
 //    2) Client wishing to import connects via  a call to HandleClientConnection
 //    3) Relay initiates a callback via persistent connection to exporter requesting a callback
 //    4) ListeningServer calls back, exporter and importer sockets are connected
-//@todo support mtls
 
 package relay
 

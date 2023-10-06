@@ -1,3 +1,12 @@
+/**********************************************************/
+/* client : This dials services behind firewalls that can only service outgoing connections via a relay.
+/**********************************************************/
+// Workflow of client usage
+// After relay starts up
+//    1) Initialise dialer
+//    2) Call dial
+//    alternatively call DialTCP directly
+
 package tcp_endpoints
 
 import (
@@ -20,27 +29,27 @@ func (r RelayDialer) Dial(network, address string) (net.Conn, error) {
 	if network != "tcp" {
 		panic(" only tcp supported")
 	}
-	return DialTCP(r.relayIP, r.clientID, address)
-}
 
-// DialTCP dials a server via the relay at the given ip
-func DialTCP(relayIP string, clientName string, serverName string) (net.Conn, error) {
 	logger := logrus.WithField("component", "importingclient")
-	logger.Infof("Starting TCP Connect Request to server id %v via relay ip %v", serverName, relayIP)
-	url := api.TCP + relayIP + api.Dial
+	logger.Infof("Starting TCP Connect Request to server id %v via relay ip %v", address, r.relayIP)
+	url := api.TCP + r.relayIP + api.Dial
 
-	jsonData, err := json.Marshal(api.ConnectionRequest{ClientID: clientName, ServerID: serverName})
+	jsonData, err := json.Marshal(api.ConnectionRequest{ClientID: r.clientID, ServerID: address})
 	if err != nil {
 		logger.Errorln(err)
 		return nil, err
 	}
 
-	conn, resp := httputils.Connect(relayIP, url, string(jsonData))
+	conn, resp := httputils.Connect(r.relayIP, url, string(jsonData))
 	if resp == nil {
 		logger.Infof("Successfully Connected")
 		return conn, nil
 	}
-
 	logger.Errorf("connect Request Failed")
 	return nil, fmt.Errorf("connect Request Failed")
+}
+
+// DialTCP dials a server via the relay at the given ip via RelayDialer.Dial
+func DialTCP(network, address string, relayIP string, clientName string) (net.Conn, error) {
+	return RelayDialer{relayIP: relayIP, clientID: clientName}.Dial(network, address)
 }
