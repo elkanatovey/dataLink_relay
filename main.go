@@ -85,11 +85,13 @@ func main() {
 	time.Sleep(1000 * time.Millisecond)
 
 	//start tcp_endpoints
-	listener, err := tcp_endpoints.ListenRelay(relayAddress, ServerName)
+	listener, err := tcp_endpoints.ListenRelay("tcp", ServerName, relayAddress)
 	if err != nil {
 		return
 	}
-	defer listener.Close()
+	defer func(listener net.Listener) {
+		_ = listener.Close()
+	}(listener)
 	go AcceptConnections(listener)
 
 	for i := 1; i < 5; i++ {

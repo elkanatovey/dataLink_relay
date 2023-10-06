@@ -20,7 +20,6 @@ type RelayListener struct {
 	reqErrCh      chan error
 	ctx           context.Context
 	closeListener context.CancelCauseFunc //calling this CancelFunc will close the persistent connection maintained by listen_internal()
-	address       ListenerAddress
 }
 
 // Accept return an error if the listener closed. The first error returned is the reason for closing,
@@ -59,9 +58,10 @@ func (r RelayListener) Close() error {
 }
 
 func (r RelayListener) Addr() net.Addr { //what should go here?
-	return r.address
+	return r.manager.listeningAddress
 }
 
+// Listen will only know to listen on an address if the RelayListener was properly initialised with a relay URL
 func (r RelayListener) Listen(network, address string) (net.Listener, error) {
 	if network != "tcp" {
 		panic("we only support tcp")
@@ -76,7 +76,7 @@ func (r RelayListener) Listen(network, address string) (net.Listener, error) {
 }
 
 // NewRelayListener creates a RelayListener that implements the net.Listener api. To run the RelayListener call
-// RelayListener.Listen
+// RelayListener.Listen. relayURL is the address of the relay via which we listen
 func NewRelayListener(relayURL string) RelayListener {
 	ctx, cancel := context.WithCancelCause(context.Background())
 
@@ -93,16 +93,14 @@ func NewRelayListener(relayURL string) RelayListener {
 	return listener
 }
 
-// ListenRelay creates and starts a RelayListener
-func ListenRelay(relayURL string, listenerAddress string) (net.Listener, error) {
+// ListenRelay creates and starts a RelayListener without prior initialisation of the backing struct
+// address is the address listened on, relayURL is the address of the relay via which we listen,
+// currently only tcp is supported
+// example usage `tcp_endpoints.listen_relay("tcp", "myserver.com:4444" ,"golang.org:8080")`
+func ListenRelay(network, address string, relayURL string) (net.Listener, error) {
 	l := NewRelayListener(relayURL)
 
-	err := l.manager.listenInternal(l.ctx, l.reqHandlingCh, l.reqErrCh, listenerAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	return l, err
+	return l.Listen(network, address)
 }
 
 // ListenerAddress represents the address that a RelayListener is listening on. To connect to a RelayListener the
