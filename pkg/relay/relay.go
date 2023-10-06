@@ -8,6 +8,7 @@
 //    3) Relay initiates a callback via persistent connection to exporter requesting a callback
 //    4) ListeningServer calls back, exporter and importer sockets are connected
 
+// Package relay implements the core logic of the relay via which a tcp_endpoints.RelayDialer and tcp_endpoints.RelayListener connect
 package relay
 
 import (

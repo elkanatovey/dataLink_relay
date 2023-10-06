@@ -1,3 +1,4 @@
+// Package tcp_endpoints provides Dialer and Listener api's for connecting via a Relay.Relay
 package tcp_endpoints
 
 import (
