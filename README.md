@@ -27,4 +27,4 @@ The Clusterlink relay allows two clusterlink gateways to communicate over mtls e
 
 4. The client will echo single words back via the terminal
 
-If you wish to run a basic demo in a single executable run ```./mbg_relay```.  It runs all three entities at once and has a few clients print basic messages at the server.
+If you wish to run a basic demo in a single executable run ```./all```.  It runs all three entities at once and has a few clients print basic messages at the server.
