@@ -3,7 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.ibm.com/mcnet-research/mbg_relay/example"
+	"github.ibm.com/mcnet-research/mbg_relay/example/utils"
 	"github.ibm.com/mcnet-research/mbg_relay/pkg/tcp_endpoints"
 	"github.ibm.com/mcnet-research/mbg_relay/pkg/utils/logutils"
 	"os"
@@ -11,9 +11,9 @@ import (
 
 func main() {
 	logutils.SetLogStyle()
-	relayAddress := fmt.Sprintf("localhost:%d", example.ServerPort)
+	relayAddress := fmt.Sprintf("localhost:%d", utils.ServerPort)
 
-	conn, err := tcp_endpoints.DialTCP("tcp", example.ExporterName, relayAddress, example.ImporterName)
+	conn, err := tcp_endpoints.DialTCP("tcp", utils.ExporterName, relayAddress, utils.ImporterName)
 	if err != nil {
 		fmt.Println("Error connecting to tcp_endpoints:", err)
 		os.Exit(1)

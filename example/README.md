@@ -1,5 +1,5 @@
 # Clusterlink relay demo
-The executables in the below subdirectories run a demo echo server
+The executables in the below subdirectories run a demo echo server/MTLS echo server.
 ### General workflow:
 
 
