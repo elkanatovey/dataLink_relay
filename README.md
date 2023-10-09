@@ -27,6 +27,6 @@ The Clusterlink relay allows two clusterlink gateways to communicate over mtls e
 
 4. The client will echo single words back via the terminal
 
-To run a basic demo in a single executable run ```./all```.  It runs all three entities at once and has a few clients print basic messages at the server. Instructions for the MTLS versions are similar. Note that all demos run on localhost with hardcoded values.
+To run a basic demo in a single executable run ```./all```.  It runs all three entities at once and has a few clients print basic messages at the server. Instructions for the MTLS versions are similar. Note that all demos run on localhost with hardcoded values that can be found [here](example/utils).
 
 Documentation of the public facing API can be found [here](docs/DOCUMENTATION.md). 
