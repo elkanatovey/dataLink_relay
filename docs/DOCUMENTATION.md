@@ -35,6 +35,21 @@ The relay is run by calling the `net.http` library's `ListenAndServe` methods
 
 ### MTLS Methods
 
+#### Client connection
+
+| Method                                                                                                                       | Description                                                             |
+|------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------|
+| `mtls_endpoint.DialMTLS(network, address string, , config *tls.Config, relayIP string, clientName string) (net.Conn, error)` | dials server listening on relay via args                                |
+| `RelayMTLSDialer.Dial(network, address string, config *tls.Config) (net.Conn, error)`                                        | dials server listening on relay. Dialer initialised with server address |
+
+#### Server connection
+
+| Method                                                                                                         | Description                                                                                                                                                                      |
+|----------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `mtls_endpoint.ListenMTLS(network, address string, config *tls.Config, relayURL string) (net.Listener, error)` | listen on relay via args                                                                                                                                                         |
+| `mtls_endpoint.MTLSRelayListener.Listen(network, address string, config *tls.Config) (net.Listener, error)`    | Listen on `MTLSRelayListener`. The returned listener listens on the relay and implements the `net.Listener` interface. `MTLSRelayListener`must be initialised with the relay url |
+
+
 ## Implementation Details
 A `tcp_endpoints.RelayListener` works by receiving connection requests via [SSE](https://en.wikipedia.org/wiki/Server-sent_events#:~:text=Server%2DSent%20Events%20(SSE),client%20connection%20has%20been%20established.) received over a persistent http connection with the relay.
 Connection requests are accepted by dialing back to the relay where the relay matches the callback with the original connection request. The relay exposes an http api,
