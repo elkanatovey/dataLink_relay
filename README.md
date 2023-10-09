@@ -15,7 +15,7 @@ The Clusterlink relay allows two clusterlink gateways to communicate over mtls e
 
     ```go build -o bin/ ./...```   
 
-2. You will find the compiled executables in the bin/ directory
+2. The compiled executables will be in the bin/ directory
 
 3. Now from 3 separate terminals run in order:
 
