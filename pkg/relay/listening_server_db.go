@@ -6,7 +6,7 @@ package relay
 import (
 	"context"
 	"errors"
-	"github.ibm.com/mcnet-research/mbg_relay/pkg/api"
+	"github.com/elkanatovey/dataLink_relay/pkg/api"
 	"sync"
 )
 

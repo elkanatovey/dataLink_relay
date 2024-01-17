@@ -3,9 +3,9 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.ibm.com/mcnet-research/mbg_relay/example/utils"
-	"github.ibm.com/mcnet-research/mbg_relay/pkg/relay"
-	"github.ibm.com/mcnet-research/mbg_relay/pkg/utils/logutils"
+	"github.com/elkanatovey/dataLink_relay/example/utils"
+	"github.com/elkanatovey/dataLink_relay/pkg/relay"
+	"github.com/elkanatovey/dataLink_relay/pkg/utils/logutils"
 	"net/http"
 )
 

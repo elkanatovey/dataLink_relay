@@ -1,7 +1,7 @@
 package relay
 
 import (
-	"github.ibm.com/mcnet-research/mbg_relay/pkg/api"
+	"github.com/elkanatovey/dataLink_relay/pkg/api"
 
 	//"testing"
 

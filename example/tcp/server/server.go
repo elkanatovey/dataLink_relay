@@ -3,9 +3,9 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.ibm.com/mcnet-research/mbg_relay/example/utils"
-	"github.ibm.com/mcnet-research/mbg_relay/pkg/tcp_endpoints"
-	"github.ibm.com/mcnet-research/mbg_relay/pkg/utils/logutils"
+	"github.com/elkanatovey/dataLink_relay/example/utils"
+	"github.com/elkanatovey/dataLink_relay/pkg/tcp_endpoints"
+	"github.com/elkanatovey/dataLink_relay/pkg/utils/logutils"
 	//"io"
 	"net"
 	"os"

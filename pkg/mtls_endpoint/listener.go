@@ -15,7 +15,7 @@ package mtls_endpoint
 import (
 	"crypto/tls"
 	"errors"
-	"github.ibm.com/mcnet-research/mbg_relay/pkg/tcp_endpoints"
+	"github.com/elkanatovey/dataLink_relay/pkg/tcp_endpoints"
 	"net"
 )
 

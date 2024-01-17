@@ -12,9 +12,9 @@ package tcp_endpoints
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/elkanatovey/dataLink_relay/pkg/api"
+	"github.com/elkanatovey/dataLink_relay/pkg/utils/httputils"
 	"github.com/sirupsen/logrus"
-	"github.ibm.com/mcnet-research/mbg_relay/pkg/api"
-	"github.ibm.com/mcnet-research/mbg_relay/pkg/utils/httputils"
 	"net"
 )
 

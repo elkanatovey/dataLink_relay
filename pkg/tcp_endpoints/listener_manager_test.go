@@ -3,8 +3,8 @@ package tcp_endpoints
 import (
 	"context"
 	"errors"
-	"github.ibm.com/mcnet-research/mbg_relay/pkg/api"
-	"github.ibm.com/mcnet-research/mbg_relay/pkg/relay"
+	"github.com/elkanatovey/dataLink_relay/pkg/api"
+	"github.com/elkanatovey/dataLink_relay/pkg/relay"
 	"io"
 	"net/http/httptest"
 	"testing"

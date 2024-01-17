@@ -4,13 +4,13 @@ import (
 	"bufio"
 	"crypto/tls"
 	"crypto/x509"
+	"github.com/elkanatovey/dataLink_relay/example/utils"
 	log "github.com/sirupsen/logrus"
-	"github.ibm.com/mcnet-research/mbg_relay/example/utils"
 
 	"fmt"
 
-	"github.ibm.com/mcnet-research/mbg_relay/pkg/mtls_endpoint"
-	"github.ibm.com/mcnet-research/mbg_relay/pkg/utils/logutils"
+	"github.com/elkanatovey/dataLink_relay/pkg/mtls_endpoint"
+	"github.com/elkanatovey/dataLink_relay/pkg/utils/logutils"
 	"os"
 )
 

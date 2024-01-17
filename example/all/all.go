@@ -3,14 +3,14 @@ package main
 import (
 	"context"
 	"errors"
-	"github.ibm.com/mcnet-research/mbg_relay/pkg/utils/logutils"
+	"github.com/elkanatovey/dataLink_relay/pkg/utils/logutils"
 	"net"
 	//"os"
 	"strconv"
 	"time"
 
-	"github.ibm.com/mcnet-research/mbg_relay/pkg/relay"
-	"github.ibm.com/mcnet-research/mbg_relay/pkg/tcp_endpoints"
+	"github.com/elkanatovey/dataLink_relay/pkg/relay"
+	"github.com/elkanatovey/dataLink_relay/pkg/tcp_endpoints"
 
 	"net/http"
 

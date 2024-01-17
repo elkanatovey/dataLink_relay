@@ -1,5 +1,5 @@
-# Clusterlink relay implementation
-The Clusterlink relay allows two clusterlink gateways to communicate over mtls even when both the gateways are in their private networks behind a firewall.
+# Datalink relay implementation
+The Datalink relay allows two datalink gateways to communicate over mtls even when both the gateways are in their private networks behind a firewall.
 
 ## Workflow
 1. Relay starts listening for importers/exporters

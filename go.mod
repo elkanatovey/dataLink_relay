@@ -1,4 +1,4 @@
-module github.ibm.com/mcnet-research/mbg_relay
+module github.com/elkanatovey/dataLink_relay
 
 go 1.20
 

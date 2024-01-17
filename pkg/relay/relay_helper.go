@@ -3,7 +3,7 @@ package relay
 import (
 	"errors"
 	"fmt"
-	"github.ibm.com/mcnet-research/mbg_relay/pkg/api"
+	"github.com/elkanatovey/dataLink_relay/pkg/api"
 	"golang.org/x/sync/errgroup"
 	"io"
 	"net"

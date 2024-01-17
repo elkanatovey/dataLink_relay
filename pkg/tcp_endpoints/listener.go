@@ -4,7 +4,7 @@ package tcp_endpoints
 import (
 	"context"
 	"errors"
-	"github.ibm.com/mcnet-research/mbg_relay/pkg/api"
+	"github.com/elkanatovey/dataLink_relay/pkg/api"
 	"io"
 	"net"
 )
