@@ -1,5 +1,6 @@
-# Datalink relay implementation
+# Datalink Relay implementation
 datalink_relay is a library written in go for the purpose of allowing servers behind a firewall to listen for connections on an untrusted relay server. The library exports the [net.Listener](https://pkg.go.dev/net#Listener) and [net.Dialer](https://pkg.go.dev/net#Dialer) interfaces for convenience of use, for servers and clients.
+
 ## Workflow
 1. Relay starts listening for connection/listen requests
 2. Server registers a listen request with Relay and maintains persistent connection
