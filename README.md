@@ -1,13 +1,14 @@
 # Datalink relay implementation
-The Datalink relay allows two datalink gateways to communicate over mtls even when both the gateways are in their private networks behind a firewall.
-
+datalink_relay is a library written in go for the purpose of allowing servers behind a firewall to listen for connections on an untrusted relay server. The library exports the [net.Listener](https://pkg.go.dev/net#Listener) and [net.Dialer](https://pkg.go.dev/net#Dialer) interfaces for convenience of use, for servers and clients.
 ## Workflow
-1. Relay starts listening for importers/exporters
-2. Server registers and maintains persistent connection
-3. Client requests to connect
-4. Relay calls back to server over persistent connection with request for new connection
-5. Server dials back
-6. Relay completes connection and starts forwarding
+1. Relay starts listening for connection/listen requests
+2. Server registers a listen request with Relay and maintains persistent connection
+3. Client registers connect request at Relay and waits on request
+4. Relay forwards Client's connection request to Server over persistent connection
+5. Server dials back to Relay
+6. Relay completes connection and starts forwarding data
+
+**Note that in current implementation MTLS support is only enabled for connection at step 6, i.e. the connection request and persistent connection send messages in the clear over http**
 
 ## Demo Usage:
 
