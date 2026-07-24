@@ -166,7 +166,7 @@ func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 		// register the waiting client before notifying the server so a fast callback cannot arrive first
 		imp := InitConnectingClient(r.Context())
 		relayState.AddConnectingClient(getWaitingClientId(cr), imp)
-		defer relayState.RemoveConnectingClient(getWaitingClientId(cr))
+		defer relayState.removeAndDrainConnectingClient(getWaitingClientId(cr), imp)
 
 		imd := InitClientData(cr)
 		err = relayState.NotifyListeningServer(cr.ServerID, imd)
@@ -205,6 +205,7 @@ func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 		clientConn := hijackConn(w)
 		if clientConn == nil {
 			relayState.logger.Errorln("server does not support hijacking")
+			serverConn.conn.Close()
 			return
 		}
 
@@ -253,6 +254,10 @@ func HandleServerCallBackConnection(relayState *RelayData) http.HandlerFunc {
 		err = relayState.NotifyConnectingClient(getCallingServerId(ca), cn)
 		if err != nil {
 			relayState.logger.Errorln(err)
+			// the waiting client is gone; close the hijacked socket so it is not leaked
+			if conn != nil {
+				conn.Close()
+			}
 		}
 
 		return
