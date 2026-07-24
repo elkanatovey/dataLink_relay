@@ -7,14 +7,16 @@ import (
 	"github.com/elkanatovey/dataLink_relay/pkg/relay"
 	"github.com/elkanatovey/dataLink_relay/pkg/utils/logutils"
 	"net/http"
+	"time"
 )
 
-func StartRelay() { //@todo currently incorrect
+func StartRelay() {
 	logutils.SetLogStyle()
 	r := relay.NewRelay()
 	untrustedRelay := http.Server{
-		Addr:    fmt.Sprintf("localhost:%d", utils.ServerPort),
-		Handler: r.Mux,
+		Addr:              fmt.Sprintf("localhost:%d", utils.ServerPort),
+		Handler:           r.Mux,
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 	if err := untrustedRelay.ListenAndServe(); err != nil {
 		if !errors.Is(err, http.ErrServerClosed) {

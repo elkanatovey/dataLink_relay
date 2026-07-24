@@ -56,14 +56,31 @@ func (db *connectingClientDB) RemoveConnectingClient(id string) {
 	db.mx.Unlock()
 }
 
-// NotifyConnectingClient return an error if the server to access does not exist in the db nil otherwise
+// NotifyConnectingClient hands a callback socket to a waiting client. It returns an error if the client is not
+// registered or already has a pending socket; in that case the caller still owns connection and must close it.
 func (db *connectingClientDB) NotifyConnectingClient(id string, connection *ServerConn) error {
 	db.mx.RLock()
 	defer db.mx.RUnlock()
 	if importer, ok := db.connectingClients[id]; ok {
-		importer.sockPassCh <- connection
-		return nil
+		select {
+		case importer.sockPassCh <- connection:
+			return nil
+		default:
+			return errors.New("client: " + id + " already has a pending connection")
+		}
 	}
-	var ErrNotFound = errors.New("server: " + id + " was not found")
-	return ErrNotFound
+	return errors.New("server: " + id + " was not found")
+}
+
+// removeAndDrainConnectingClient removes a client that stopped waiting and closes any callback socket that was
+// delivered but never consumed, so a late callback cannot leak the underlying connection.
+func (db *connectingClientDB) removeAndDrainConnectingClient(id string, imp *ConnectingClient) {
+	db.RemoveConnectingClient(id)
+	select {
+	case sc := <-imp.sockPassCh:
+		if sc != nil && sc.conn != nil {
+			sc.conn.Close()
+		}
+	default:
+	}
 }

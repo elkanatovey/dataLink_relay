@@ -38,10 +38,7 @@ func newListenerManager(relayAddr string) *listenerManager {
 // listenInternal maintains the persistent connection through which clients send connection requests,
 // the listening address of the server is only set once it calls listenInternal
 // errors are propagated through the passed in channel, canceling the context will close both passed in channels
-func (s *listenerManager) listenInternal(ctx context.Context, handlingCH chan struct {
-	*api.ConnectionRequest
-	error
-},
+func (s *listenerManager) listenInternal(ctx context.Context, handlingCH chan connRequestResult,
 	errCH chan error, address string) error {
 	s.listeningAddress = ListenerAddress{address}
 
@@ -79,19 +76,13 @@ func (s *listenerManager) listenInternal(ctx context.Context, handlingCH chan st
 					}
 
 					//send off to be handled
-					handlingCH <- struct {
-						*api.ConnectionRequest
-						error
-					}{nil, err}
+					handlingCH <- connRequestResult{nil, err}
 					return
 				}
 
 				//sendoff to be handled
 				s.logger.Infof("received connection request from: %s", event.ClientID)
-				handlingCH <- struct {
-					*api.ConnectionRequest
-					error
-				}{event, nil}
+				handlingCH <- connRequestResult{event, nil}
 			}
 		}
 	}()

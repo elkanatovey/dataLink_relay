@@ -11,13 +11,16 @@ import (
 
 const bufferSize = 100
 
+// connRequestResult carries either a received connection request or the error that ended the listen stream
+type connRequestResult struct {
+	*api.ConnectionRequest
+	error
+}
+
 // RelayListener listens for incoming connections via a relay over a http sse connection.
 type RelayListener struct {
 	manager       *listenerManager //should this be promoted?
-	reqHandlingCh chan struct {
-		*api.ConnectionRequest
-		error
-	}
+	reqHandlingCh chan connRequestResult
 	reqErrCh      chan error
 	ctx           context.Context
 	closeListener context.CancelCauseFunc //calling this CancelFunc will close the persistent connection maintained by listen_internal()
@@ -82,11 +85,8 @@ func NewRelayListener(relayURL string) RelayListener {
 	ctx, cancel := context.WithCancelCause(context.Background())
 
 	listener := RelayListener{
-		manager: newListenerManager(relayURL),
-		reqHandlingCh: make(chan struct {
-			*api.ConnectionRequest
-			error
-		}, bufferSize),
+		manager:       newListenerManager(relayURL),
+		reqHandlingCh: make(chan connRequestResult, bufferSize),
 		reqErrCh:      make(chan error, 1),
 		ctx:           ctx,
 		closeListener: cancel,
@@ -114,10 +114,10 @@ func (r ListenerAddress) Network() string {
 	return "tcp"
 }
 
-// String is the address that a RelayListener is listening on. It panics of the RelayListener hasn't started listening
+// String is the address that a RelayListener is listening on, or a placeholder if it has not started listening yet
 func (r ListenerAddress) String() string {
 	if r.Name != "" {
 		return r.Name
 	}
-	panic("listener has not started listening")
+	return "<relay listener not started>"
 }

@@ -50,7 +50,6 @@ var importerName = "bb"
 func TestImporterDB_NotifyImporter(t *testing.T) {
 	type fields struct {
 		importers map[string]*ConnectingClient
-		mx        sync.RWMutex
 	}
 	type args struct {
 		id         string
@@ -67,7 +66,6 @@ func TestImporterDB_NotifyImporter(t *testing.T) {
 			name: "basic_test",
 			fields: fields{
 				map[string]*ConnectingClient{importerName: InitConnectingClient(context.TODO())},
-				sync.RWMutex{},
 			},
 			args: args{
 				importerName,
@@ -81,7 +79,6 @@ func TestImporterDB_NotifyImporter(t *testing.T) {
 			name: "basic_test2",
 			fields: fields{
 				map[string]*ConnectingClient{importerName: InitConnectingClient(context.TODO())},
-				sync.RWMutex{},
 			},
 			args: args{
 				importerName + "not",
@@ -103,5 +100,46 @@ func TestImporterDB_NotifyImporter(t *testing.T) {
 				t.Errorf("NotifyImpporter() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+type closeSpyConn struct {
+	connTester
+	closed bool
+}
+
+func (c *closeSpyConn) Close() error {
+	c.closed = true
+	return nil
+}
+
+func TestRemoveAndDrainClosesUndeliveredSocket(t *testing.T) {
+	db := initConnectingClientDB()
+	imp := InitConnectingClient(context.TODO())
+	db.AddConnectingClient("k", imp)
+
+	spy := &closeSpyConn{}
+	imp.sockPassCh <- &ServerConn{conn: spy}
+
+	db.removeAndDrainConnectingClient("k", imp)
+
+	if !spy.closed {
+		t.Fatal("expected undelivered callback socket to be closed")
+	}
+	if err := db.NotifyConnectingClient("k", &ServerConn{}); err == nil {
+		t.Fatal("expected client to be removed from db")
+	}
+}
+
+func TestNotifyConnectingClientAlreadyPending(t *testing.T) {
+	db := initConnectingClientDB()
+	imp := InitConnectingClient(context.TODO())
+	db.AddConnectingClient("k", imp)
+
+	if err := db.NotifyConnectingClient("k", &ServerConn{}); err != nil {
+		t.Fatalf("first notify should succeed: %v", err)
+	}
+	if err := db.NotifyConnectingClient("k", &ServerConn{}); err == nil {
+		t.Fatal("expected error when a socket is already pending")
 	}
 }
