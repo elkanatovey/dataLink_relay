@@ -50,7 +50,6 @@ var importerName = "bb"
 func TestImporterDB_NotifyImporter(t *testing.T) {
 	type fields struct {
 		importers map[string]*ConnectingClient
-		mx        sync.RWMutex
 	}
 	type args struct {
 		id         string
@@ -67,7 +66,6 @@ func TestImporterDB_NotifyImporter(t *testing.T) {
 			name: "basic_test",
 			fields: fields{
 				map[string]*ConnectingClient{importerName: InitConnectingClient(context.TODO())},
-				sync.RWMutex{},
 			},
 			args: args{
 				importerName,
@@ -81,7 +79,6 @@ func TestImporterDB_NotifyImporter(t *testing.T) {
 			name: "basic_test2",
 			fields: fields{
 				map[string]*ConnectingClient{importerName: InitConnectingClient(context.TODO())},
-				sync.RWMutex{},
 			},
 			args: args{
 				importerName + "not",

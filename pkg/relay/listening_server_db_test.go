@@ -23,7 +23,6 @@ var connReq2 = api.ConnectionRequest{
 func TestExporterDB_NotifyExporter(t *testing.T) {
 	type fields struct {
 		exporters map[string]*ListeningServer
-		mx        sync.RWMutex
 	}
 	type args struct {
 		id  string
@@ -38,7 +37,7 @@ func TestExporterDB_NotifyExporter(t *testing.T) {
 
 		{
 			name:   "basic_test",
-			fields: fields{map[string]*ListeningServer{exporterName: InitListeningServer(context.TODO())}, sync.RWMutex{}},
+			fields: fields{map[string]*ListeningServer{exporterName: InitListeningServer(context.TODO())}},
 			args: []args{
 				{exporterName, InitClientData(connReq1)},
 				{exporterName, InitClientData(connReq2)},
@@ -47,7 +46,7 @@ func TestExporterDB_NotifyExporter(t *testing.T) {
 		},
 		{
 			name:   "basic_test2",
-			fields: fields{map[string]*ListeningServer{exporterName: InitListeningServer(context.TODO())}, sync.RWMutex{}},
+			fields: fields{map[string]*ListeningServer{exporterName: InitListeningServer(context.TODO())}},
 			args: []args{
 				{exporterName, InitClientData(connReq2)},
 			},
@@ -55,7 +54,7 @@ func TestExporterDB_NotifyExporter(t *testing.T) {
 		},
 		{
 			name:   "multiple_notifications_test",
-			fields: fields{map[string]*ListeningServer{exporterName: InitListeningServer(context.TODO())}, sync.RWMutex{}},
+			fields: fields{map[string]*ListeningServer{exporterName: InitListeningServer(context.TODO())}},
 			args: []args{
 				{exporterName, InitClientData(connReq1)},
 				{exporterName, InitClientData(connReq2)},
