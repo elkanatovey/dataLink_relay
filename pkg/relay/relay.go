@@ -120,7 +120,7 @@ func HandleServerLongTermConnection(relayState *RelayData) http.HandlerFunc {
 			relayState.logger.Infof(" exporter %s stopped listening", req.ServerID)
 			close(connectionRequests.serverNotificationCh)
 			for connectionRequest := range connectionRequests.serverNotificationCh {
-				connectionRequest.resultNotificationCh <- api.ForwardingSuccessNotification{api.NoteServerConnLost, nil}
+				connectionRequest.resultNotificationCh <- api.ForwardingSuccessNotification{Message: api.NoteServerConnLost}
 			}
 
 		}()
@@ -133,17 +133,17 @@ func HandleServerLongTermConnection(relayState *RelayData) http.HandlerFunc {
 			event, err := api.MarshalToSSEEvent(&importer.msg)
 			if err != nil {
 				relayState.logger.Errorln(err)
-				importer.resultNotificationCh <- api.ForwardingSuccessNotification{api.NoteFail, err}
+				importer.resultNotificationCh <- api.ForwardingSuccessNotification{Message: api.NoteFail, Error: err}
 			}
 
 			_, err = fmt.Fprint(w, event)
 			if err != nil {
 				relayState.logger.Errorln(err)
-				importer.resultNotificationCh <- api.ForwardingSuccessNotification{api.NoteFail, err}
+				importer.resultNotificationCh <- api.ForwardingSuccessNotification{Message: api.NoteFail, Error: err}
 			}
 
 			flusher.Flush()
-			importer.resultNotificationCh <- api.ForwardingSuccessNotification{api.NotePassed, nil}
+			importer.resultNotificationCh <- api.ForwardingSuccessNotification{Message: api.NotePassed}
 		}
 
 	}
@@ -163,8 +163,12 @@ func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 		}
 		relayState.logger.Infof("connection request server: %s, client: %s", cr.ServerID, cr.ClientID)
 
-		imd := InitClientData(cr)
+		// register the waiting client before notifying the server so a fast callback cannot arrive first
+		imp := InitConnectingClient(r.Context())
+		relayState.AddConnectingClient(getWaitingClientId(cr), imp)
+		defer relayState.RemoveConnectingClient(getWaitingClientId(cr))
 
+		imd := InitClientData(cr)
 		err = relayState.NotifyListeningServer(cr.ServerID, imd)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusNotFound)
@@ -177,10 +181,6 @@ func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 			http.Error(w, res.Error.Error(), http.StatusBadRequest)
 			return
 		}
-		imp := InitConnectingClient(r.Context())
-
-		relayState.AddConnectingClient(getWaitingClientId(cr), imp)
-		defer relayState.RemoveConnectingClient(getWaitingClientId(cr))
 
 		var serverConn *ServerConn
 		select {
