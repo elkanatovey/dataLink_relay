@@ -22,6 +22,7 @@ import (
 // MTLSRelayListener is a backing struct for MTLSRelayListener.Listen to maintain the tls.Listener api
 type MTLSRelayListener struct {
 	relayURL string
+	opts     []tcp_endpoints.Option
 }
 
 func (r MTLSRelayListener) Listen(network, address string, config *tls.Config) (net.Listener, error) {
@@ -29,7 +30,7 @@ func (r MTLSRelayListener) Listen(network, address string, config *tls.Config) (
 		config.GetCertificate == nil && config.GetConfigForClient == nil {
 		return nil, errors.New("tls: neither Certificates, GetCertificate, nor GetConfigForClient set in Config")
 	}
-	l := tcp_endpoints.NewRelayListener(r.relayURL)
+	l := tcp_endpoints.NewRelayListener(r.relayURL, r.opts...)
 	listener, err := l.Listen(network, address)
 	if err != nil {
 		return nil, err
@@ -39,6 +40,6 @@ func (r MTLSRelayListener) Listen(network, address string, config *tls.Config) (
 }
 
 // ListenMTLS is a version of Listen without the backing struct
-func ListenMTLS(network, address string, config *tls.Config, relayURL string) (net.Listener, error) {
-	return MTLSRelayListener{relayURL: relayURL}.Listen(network, address, config)
+func ListenMTLS(network, address string, config *tls.Config, relayURL string, opts ...tcp_endpoints.Option) (net.Listener, error) {
+	return MTLSRelayListener{relayURL: relayURL, opts: opts}.Listen(network, address, config)
 }

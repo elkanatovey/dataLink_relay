@@ -12,24 +12,25 @@ import (
 type RelayMTLSDialer struct {
 	relayIP  string
 	clientID string
+	opts     []tcp_endpoints.Option
 }
 
 func (r RelayMTLSDialer) Dial(network, address string, config *tls.Config) (net.Conn, error) {
 	if network != "tcp" {
 		return nil, errors.New("only tcp supported")
 	}
-	return dial(context.Background(), r.relayIP, r.clientID, address, config)
+	return dial(context.Background(), r.relayIP, r.clientID, address, config, r.opts...)
 }
 
 // DialMTLS dials the given network address via the given relay
-func DialMTLS(network, address string, config *tls.Config, relayIP string, clientName string) (net.Conn, error) {
-	dialer := RelayMTLSDialer{relayIP: relayIP, clientID: clientName}
+func DialMTLS(network, address string, config *tls.Config, relayIP string, clientName string, opts ...tcp_endpoints.Option) (net.Conn, error) {
+	dialer := RelayMTLSDialer{relayIP: relayIP, clientID: clientName, opts: opts}
 	return dialer.Dial(network, address, config)
 
 }
 
-func dial(ctx context.Context, relayIP string, clientName string, serverName string, config *tls.Config) (net.Conn, error) {
-	rawConn, err := tcp_endpoints.DialTCP("tcp", serverName, relayIP, clientName)
+func dial(ctx context.Context, relayIP string, clientName string, serverName string, config *tls.Config, opts ...tcp_endpoints.Option) (net.Conn, error) {
+	rawConn, err := tcp_endpoints.DialTCP("tcp", serverName, relayIP, clientName, opts...)
 	if err != nil {
 		return nil, err
 	}

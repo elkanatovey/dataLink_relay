@@ -10,7 +10,6 @@
 package tcp_endpoints
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/elkanatovey/dataLink_relay/pkg/api"
 	"github.com/elkanatovey/dataLink_relay/pkg/utils/httputils"
@@ -22,6 +21,7 @@ import (
 type RelayDialer struct {
 	relayIP  string
 	clientID string
+	relayPub *[32]byte
 }
 
 // Dial fulfills the same api as net.Dial but does it's dial via a Relay who's IP is in the backing struct
@@ -34,7 +34,7 @@ func (r RelayDialer) Dial(network, address string) (net.Conn, error) {
 	logger.Infof("Starting TCP Connect Request to server id %v via relay ip %v", address, r.relayIP)
 	url := api.TCP + r.relayIP + api.Dial
 
-	jsonData, err := json.Marshal(api.ConnectionRequest{ClientID: r.clientID, ServerID: address})
+	jsonData, err := api.EncodeRouting(api.ConnectionRequest{ClientID: r.clientID, ServerID: address}, r.relayPub)
 	if err != nil {
 		logger.Errorln(err)
 		return nil, err
@@ -50,6 +50,7 @@ func (r RelayDialer) Dial(network, address string) (net.Conn, error) {
 }
 
 // DialTCP dials a server via the relay at the given ip via RelayDialer.Dial
-func DialTCP(network, address string, relayIP string, clientName string) (net.Conn, error) {
-	return RelayDialer{relayIP: relayIP, clientID: clientName}.Dial(network, address)
+func DialTCP(network, address string, relayIP string, clientName string, opts ...Option) (net.Conn, error) {
+	o := applyOptions(opts)
+	return RelayDialer{relayIP: relayIP, clientID: clientName, relayPub: o.relayPub}.Dial(network, address)
 }
