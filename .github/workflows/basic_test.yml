@@ -44,8 +44,6 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: ${{ matrix.go }}
-    - name: setup tparse
-      run:  go install github.com/mfridman/tparse@latest
     - name: checkout
       uses: actions/checkout@v4
     - name: build
