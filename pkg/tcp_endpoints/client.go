@@ -27,7 +27,7 @@ type RelayDialer struct {
 // Dial fulfills the same api as net.Dial but does it's dial via a Relay who's IP is in the backing struct
 func (r RelayDialer) Dial(network, address string) (net.Conn, error) {
 	if network != "tcp" {
-		panic(" only tcp supported")
+		return nil, fmt.Errorf("only tcp supported, got %q", network)
 	}
 
 	logger := logrus.WithField("component", "importingclient")
