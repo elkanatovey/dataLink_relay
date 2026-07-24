@@ -38,11 +38,7 @@ func TestListenerManager_listenInternal(t *testing.T) {
 	exportingServer := newListenerManager(relayServer.Listener.Addr().String())
 
 	// channel to receive connrequests
-	handlingChennel := make(chan struct {
-		*api.ConnectionRequest
-		error
-	},
-		100)
+	handlingChennel := make(chan connRequestResult, 100)
 	errChan := make(chan error, 1)
 	ctx, cancel := context.WithCancel(context.Background()) // need to add  sse events to server to send + spin up gouroutine for export logic
 
