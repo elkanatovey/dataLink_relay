@@ -17,7 +17,9 @@ import (
 	"fmt"
 	"github.com/elkanatovey/dataLink_relay/pkg/api"
 	"github.com/sirupsen/logrus"
+	"io"
 	"net/http"
+	"sync/atomic"
 	"time"
 )
 
@@ -46,26 +48,53 @@ type StateManager interface {
 type RelayData struct {
 	*listeningServerDB
 	*connectingClientDB
-	logger *logrus.Entry
+	logger      *logrus.Entry
+	routingKeys atomic.Pointer[[]*api.RelayKeyPair] // keyring used to open sealed routing metadata
 }
 
 func initRelayData() *RelayData {
 	return &RelayData{
-		initListeningServerDB(),
-		initConnectingClientDB(),
-		logrus.WithField("component", "relaydata"),
+		listeningServerDB:  initListeningServerDB(),
+		connectingClientDB: initConnectingClientDB(),
+		logger:             logrus.WithField("component", "relaydata"),
 	}
+}
+
+// SetRoutingKeys replaces the relay's routing keyring. Safe to call while the relay is serving.
+func (d *RelayData) SetRoutingKeys(ring []*api.RelayKeyPair) {
+	d.routingKeys.Store(&ring)
+}
+
+// decodeRouting opens a sealed routing message using the relay's keyring, falling back to plaintext
+// JSON when no keyring is configured or the body is not sealed.
+func (d *RelayData) decodeRouting(body []byte, v any) error {
+	if ring := d.routingKeys.Load(); ring != nil && len(*ring) > 0 {
+		if err := api.OpenRouting(body, *ring, v); err == nil {
+			return nil
+		}
+	}
+	return json.Unmarshal(body, v)
 }
 
 // NewRelay returns a Relay with all initialised data structures and handler functions. To start the relay it's mux needs
 // to be passed to a http.Server and then start the server
-func NewRelay() *Relay {
+func NewRelay(routingKeys ...*api.RelayKeyPair) *Relay {
 	data := initRelayData()
+	if len(routingKeys) > 0 {
+		data.SetRoutingKeys(routingKeys)
+	}
 	mux := registerHandlers(data)
 	return &Relay{
 		Data:   data,
 		Mux:    mux,
 		logger: logrus.WithField("component", "relay"),
+	}
+}
+
+// SetRoutingKeys updates the relay's routing keyring at runtime, without a restart.
+func (r *Relay) SetRoutingKeys(ring []*api.RelayKeyPair) {
+	if d, ok := r.Data.(*RelayData); ok {
+		d.SetRoutingKeys(ring)
 	}
 }
 
@@ -93,9 +122,14 @@ func HandleServerLongTermConnection(relayState *RelayData) http.HandlerFunc {
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("Connection", "keep-alive")
 
-		var req api.ListenRequest
-		err := json.NewDecoder(r.Body).Decode(&req)
+		body, err := io.ReadAll(r.Body)
 		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			relayState.logger.Errorln(err)
+			return
+		}
+		var req api.ListenRequest
+		if err := relayState.decodeRouting(body, &req); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			relayState.logger.Errorln(err)
 			return
@@ -153,11 +187,15 @@ func HandleServerLongTermConnection(relayState *RelayData) http.HandlerFunc {
 // from a callback connection with which to connect an ConnectingClient connection
 func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var cr api.ConnectionRequest
-		err := json.NewDecoder(r.Body).Decode(&cr)
+		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
-			//relayState.logger.Caller("location", "HandleClientConn")
+			relayState.logger.Errorln(err)
+			return
+		}
+		var cr api.ConnectionRequest
+		if err := relayState.decodeRouting(body, &cr); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			relayState.logger.Errorln(err)
 			return
 		}
@@ -222,9 +260,14 @@ func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 // and passes the connection to the waiting client handler for gluing
 func HandleServerCallBackConnection(relayState *RelayData) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var ca api.ConnectionAccept
-		err := json.NewDecoder(r.Body).Decode(&ca)
+		body, err := io.ReadAll(r.Body)
 		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			relayState.logger.Errorln(err)
+			return
+		}
+		var ca api.ConnectionAccept
+		if err := relayState.decodeRouting(body, &ca); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			relayState.logger.Errorln(err)
 			return
