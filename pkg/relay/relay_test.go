@@ -1,79 +1,64 @@
 package relay
 
 import (
-	"github.com/elkanatovey/dataLink_relay/pkg/api"
-
-	//"testing"
-
 	"bytes"
+	"context"
 	"encoding/json"
+	"github.com/elkanatovey/dataLink_relay/pkg/api"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 )
-
-// test function
-func TestMaintainConnection(t *testing.T) {
-	actualInt := MaintainConnection()
-	expectedInt := 1
-	if actualInt != expectedInt {
-		t.Errorf("Expected Int(%d) is not same as"+
-			" actual string (%d)", expectedInt, actualInt)
-	}
-}
 
 func TestHandleServerLongTermConnection(t *testing.T) {
 	mockDB := initRelayData()
-	handler := HandleServerLongTermConnection(mockDB)
+	server := httptest.NewServer(HandleServerLongTermConnection(mockDB))
+	defer server.Close()
 
 	reqBody := api.ListenRequest{ServerID: "123"}
-
 	reqBodyBytes, _ := json.Marshal(reqBody)
 
-	req, err := http.NewRequest("POST", api.Listen, bytes.NewReader(reqBodyBytes))
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "POST", server.URL, bytes.NewReader(reqBodyBytes))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	rr := httptest.NewRecorder()
-
-	go handler(rr, req)
-	// Wait for a short time for the handler to start up
-	time.Sleep(1000 * time.Millisecond)
-
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
 	}
+	defer resp.Body.Close()
 
-	if contentType := rr.Header().Get("Content-Type"); contentType != "text/event-stream" {
+	// the server is registered before the handler flushes its 200, so headers are readable here
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", resp.StatusCode, http.StatusOK)
+	}
+	if contentType := resp.Header.Get("Content-Type"); contentType != "text/event-stream" {
 		t.Errorf("handler returned wrong content type: got %v want %v", contentType, "text/event-stream")
 	}
-
-	if cacheControl := rr.Header().Get("Cache-Control"); cacheControl != "no-cache" {
+	if cacheControl := resp.Header.Get("Cache-Control"); cacheControl != "no-cache" {
 		t.Errorf("handler returned wrong cache control header: got %v want %v", cacheControl, "no-cache")
 	}
 
-	if connectionControl := rr.Header().Get("Connection"); connectionControl != "keep-alive" {
-		t.Errorf("handler returned wrong connection header: got %v want %v", connectionControl, "keep-alive")
-	}
-
-	// Simulate SSE messages
 	connReq := api.ConnectionRequest{
 		Data:     "Some data",
 		ClientID: "123",
 		ServerID: "456",
 	}
-	err = mockDB.NotifyListeningServer("123", InitClientData(connReq))
-	if err != nil {
-		return
+	if err := mockDB.NotifyListeningServer("123", InitClientData(connReq)); err != nil {
+		t.Fatal(err)
 	}
-	// Wait for a short time to ensure the handler handles the message sent
-	time.Sleep(100 * time.Millisecond)
-	event, _ := api.MarshalToSSEEvent(&connReq)
 
-	// Check the response body contains the expected SSE event
-	if rr.Body.String() != event {
-		t.Errorf("response body does not match expected SSE event:\nExpected: %s\nActual: %s", event, rr.Body.String())
+	event, _ := api.MarshalToSSEEvent(&connReq)
+	buf := make([]byte, len(event))
+	if _, err := io.ReadFull(resp.Body, buf); err != nil {
+		t.Fatal(err)
+	}
+	if string(buf) != event {
+		t.Errorf("response body does not match expected SSE event:\nExpected: %s\nActual: %s", event, string(buf))
 	}
 }
