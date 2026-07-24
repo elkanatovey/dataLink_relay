@@ -18,7 +18,11 @@ import (
 	"github.com/elkanatovey/dataLink_relay/pkg/api"
 	"github.com/sirupsen/logrus"
 	"net/http"
+	"time"
 )
+
+// callbackTimeout bounds how long a client waits for a listening server to call back
+const callbackTimeout = 30 * time.Second
 
 // Relay contains Data for running relay code
 type Relay struct {
@@ -176,16 +180,23 @@ func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 		imp := InitConnectingClient(r.Context())
 
 		relayState.AddConnectingClient(getWaitingClientId(cr), imp)
-		go func() { //@todo the relay in principle allows other server attempts befpre return, should handle?
-			<-r.Context().Done()
-			relayState.RemoveConnectingClient(getWaitingClientId(cr))
-		}()
+		defer relayState.RemoveConnectingClient(getWaitingClientId(cr))
 
-		serverConn := <-imp.sockPassCh //@todo need to deal with timeout here
+		var serverConn *ServerConn
+		select {
+		case serverConn = <-imp.sockPassCh:
+		case <-r.Context().Done():
+			relayState.logger.Infof("client %s stopped waiting for server %s", cr.ClientID, cr.ServerID)
+			return
+		case <-time.After(callbackTimeout):
+			http.Error(w, "timed out waiting for server callback", http.StatusGatewayTimeout)
+			relayState.logger.Errorf("timed out waiting for server %s callback for client %s", cr.ServerID, cr.ClientID)
+			return
+		}
 
 		if serverConn.err != nil {
 			http.Error(w, serverConn.err.Error(), http.StatusBadRequest)
-			relayState.logger.Errorln(err)
+			relayState.logger.Errorln(serverConn.err)
 			return
 		}
 
@@ -247,7 +258,3 @@ func HandleServerCallBackConnection(relayState *RelayData) http.HandlerFunc {
 		return
 	}
 }
-
-// proxy via which server and client connect
-
-func MaintainConnection() int { return 1 }

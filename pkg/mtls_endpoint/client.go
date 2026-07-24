@@ -3,6 +3,7 @@ package mtls_endpoint
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"github.com/elkanatovey/dataLink_relay/pkg/tcp_endpoints"
 	"net"
 )
@@ -15,7 +16,7 @@ type RelayMTLSDialer struct {
 
 func (r RelayMTLSDialer) Dial(network, address string, config *tls.Config) (net.Conn, error) {
 	if network != "tcp" {
-		panic(" only tcp supported")
+		return nil, errors.New("only tcp supported")
 	}
 	return dial(context.Background(), r.relayIP, r.clientID, address, config)
 }

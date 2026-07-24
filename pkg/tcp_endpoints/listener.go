@@ -65,7 +65,7 @@ func (r RelayListener) Addr() net.Addr { //what should go here?
 // Listen will only know to listen on an address if the RelayListener was properly initialised with a relay URL
 func (r RelayListener) Listen(network, address string) (net.Listener, error) {
 	if network != "tcp" {
-		panic("we only support tcp")
+		return nil, errors.New("only tcp supported")
 	}
 
 	err := r.manager.listenInternal(r.ctx, r.reqHandlingCh, r.reqErrCh, address)

@@ -11,6 +11,9 @@ datalink_relay is a library written in go for the purpose of allowing servers be
 
 **Note that in current implementation MTLS support is only enabled for connection at step 6, i.e. the connection request and persistent connection send messages in the clear over http**
 
+## Requirements
+Go 1.23 or newer.
+
 ## Demo Usage:
 
 1. From the project root directory run:

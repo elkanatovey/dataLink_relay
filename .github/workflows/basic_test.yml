@@ -38,18 +38,20 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go: ['1.20']  
+        go: ['1.23']  
     steps:
     - name: set up go 1.x
       uses: actions/setup-go@v5
       with:
         go-version: ${{ matrix.go }}
     - name: setup tparse
-      run:  go install github.com/mfridman/tparse@latest
+      run: go install github.com/mfridman/tparse@v0.18.0
     - name: checkout
       uses: actions/checkout@v4
     - name: build
       run: go build -v ./...
 
     - name: test
-      run: go test -v ./...
+      run: |
+        set -o pipefail
+        go test -json ./... | tparse -all

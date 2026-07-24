@@ -27,6 +27,4 @@ func main() {
 
 	//relayAddress := fmt.Sprintf("localhost:%d", ServerPort)
 	StartRelay()
-
-	fmt.Println("random number:", relay.MaintainConnection())
 }
