@@ -11,6 +11,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"github.com/elkanatovey/dataLink_relay/pkg/api"
 	"log"
 	"math/big"
 	"net"
@@ -67,7 +68,20 @@ func run() error {
 		return err
 	}
 	// client leaf: used for mTLS client authentication
-	return writeLeaf("client", caCert, caKey, x509.ExtKeyUsageClientAuth, []string{"bar"}, nil)
+	if err := writeLeaf("client", caCert, caKey, x509.ExtKeyUsageClientAuth, []string{"bar"}, nil); err != nil {
+		return err
+	}
+
+	// relay X25519 keypair used to seal routing metadata to the relay
+	kp, err := api.GenerateRelayKeyPair()
+	if err != nil {
+		return err
+	}
+	priv := kp.PrivateKey()
+	if err := os.WriteFile(filepath.Join(outDir, "relay.key"), priv[:], 0o600); err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(outDir, "relay.pub"), kp.Public[:], 0o644)
 }
 
 func writeLeaf(name string, caCert *x509.Certificate, caKey *ecdsa.PrivateKey, eku x509.ExtKeyUsage, dns []string, ips []net.IP) error {

@@ -12,7 +12,12 @@ import (
 
 func StartRelay() {
 	logutils.SetLogStyle()
-	r := relay.NewRelay()
+	kp, err := utils.LoadRelayKeyPair()
+	if err != nil {
+		fmt.Printf("error loading relay key: %s\n", err)
+		return
+	}
+	r := relay.NewRelay(kp)
 	untrustedRelay := http.Server{
 		Addr:              fmt.Sprintf("localhost:%d", utils.ServerPort),
 		Handler:           r.Mux,

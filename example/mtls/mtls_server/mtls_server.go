@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/elkanatovey/dataLink_relay/example/utils"
 	"github.com/elkanatovey/dataLink_relay/pkg/mtls_endpoint"
+	"github.com/elkanatovey/dataLink_relay/pkg/tcp_endpoints"
 	"github.com/elkanatovey/dataLink_relay/pkg/utils/logutils"
 	log "github.com/sirupsen/logrus"
 	"net"
@@ -55,9 +56,14 @@ func main() {
 		log.Fatalf("tls config: %v", err)
 	}
 
+	relayPub, err := utils.LoadRelayPublicKey()
+	if err != nil {
+		log.Fatalf("relay key: %v", err)
+	}
+
 	relayAddress := fmt.Sprintf("localhost:%d", utils.ServerPort)
 
-	listener, err := mtls_endpoint.ListenMTLS("tcp", utils.ExporterName, tlsConfig, relayAddress)
+	listener, err := mtls_endpoint.ListenMTLS("tcp", utils.ExporterName, tlsConfig, relayAddress, tcp_endpoints.WithRelayKey(relayPub))
 	if err != nil {
 		log.Fatalf("listen failed: %v", err)
 	}
