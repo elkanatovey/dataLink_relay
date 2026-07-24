@@ -2,49 +2,20 @@ package main
 
 import (
 	"bufio"
-	"crypto/tls"
-	"crypto/x509"
-	"github.com/elkanatovey/dataLink_relay/example/utils"
-	log "github.com/sirupsen/logrus"
-
 	"fmt"
-
+	"github.com/elkanatovey/dataLink_relay/example/utils"
 	"github.com/elkanatovey/dataLink_relay/pkg/mtls_endpoint"
 	"github.com/elkanatovey/dataLink_relay/pkg/utils/logutils"
+	log "github.com/sirupsen/logrus"
 	"os"
 )
 
 func main() {
 	logutils.SetLogStyle()
 
-	// load CA certificate file and add it to list of client CAs
-	caCertFile, err := os.ReadFile(utils.CertFile)
+	tlsConfig, err := utils.ClientTLSConfig()
 	if err != nil {
-		log.Fatalf("error reading CA certificate: %v", err)
-	}
-	caCertPool := x509.NewCertPool()
-	caCertPool.AppendCertsFromPEM(caCertFile)
-	cert, err := tls.LoadX509KeyPair(utils.CertFile, utils.KeyFile)
-	if err != nil {
-		fmt.Println("Error loading client certificates:", err)
-		os.Exit(1)
-	}
-	// Create the TLS Config with the CA pool and enable Client certificate validation
-	tlsConfig := &tls.Config{
-		ClientCAs:          caCertPool,
-		ClientAuth:         tls.RequireAndVerifyClientCert,
-		MinVersion:         tls.VersionTLS12,
-		CurvePreferences:   []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
-		Certificates:       []tls.Certificate{cert},
-		InsecureSkipVerify: true,
-		CipherSuites: []uint16{
-			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-			tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_RSA_WITH_AES_256_CBC_SHA,
-			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-		},
+		log.Fatalf("tls config: %v", err)
 	}
 
 	relayAddress := fmt.Sprintf("localhost:%d", utils.ServerPort)
