@@ -1,5 +1,6 @@
-// Command gencerts generates a throwaway demo PKI (CA + server + client) for the mTLS example.
-// The generated material is for local demos only. Run it from the repo root:
+// Command gencerts generates throwaway demo PKIs for the mTLS example: one for the end-to-end
+// client/server session, and a separate one for the relay control plane. The generated material is
+// for local demos only. Run it from the repo root:
 //
 //	go run ./example/utils/gencerts
 package main
@@ -34,31 +35,10 @@ func run() error {
 		return err
 	}
 
-	caKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	// End-to-end PKI: authenticates the client and the server to each other. The relay is not part
+	// of this trust domain and never holds a credential from it.
+	caCert, caKey, err := newCA("datalink-relay demo CA", "ca-cert.pem", "ca-key.pem")
 	if err != nil {
-		return err
-	}
-	caTmpl := &x509.Certificate{
-		SerialNumber:          big.NewInt(1),
-		Subject:               pkix.Name{CommonName: "datalink-relay demo CA"},
-		NotBefore:             time.Now().Add(-time.Hour),
-		NotAfter:              time.Now().AddDate(10, 0, 0),
-		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
-		BasicConstraintsValid: true,
-		IsCA:                  true,
-	}
-	caDER, err := x509.CreateCertificate(rand.Reader, caTmpl, caTmpl, &caKey.PublicKey, caKey)
-	if err != nil {
-		return err
-	}
-	caCert, err := x509.ParseCertificate(caDER)
-	if err != nil {
-		return err
-	}
-	if err := writeCert("ca-cert.pem", caDER); err != nil {
-		return err
-	}
-	if err := writeKey("ca-key.pem", caKey); err != nil {
 		return err
 	}
 
@@ -72,6 +52,24 @@ func run() error {
 		return err
 	}
 
+	// Control-plane PKI: authenticates a listening server to the relay. Deliberately a separate CA,
+	// so a client certificate from the end-to-end PKI cannot be used to register a server id.
+	ctrlCert, ctrlKey, err := newCA("datalink-relay demo control CA", "control-ca-cert.pem", "control-ca-key.pem")
+	if err != nil {
+		return err
+	}
+
+	// relay leaf: presented by the relay on its mTLS control listener
+	if err := writeLeaf("relay-control", ctrlCert, ctrlKey, x509.ExtKeyUsageServerAuth,
+		[]string{"localhost"}, []net.IP{net.ParseIP("127.0.0.1")}); err != nil {
+		return err
+	}
+	// exporter leaf: SAN must contain the server id being registered, which the relay enforces
+	if err := writeLeaf("exporter-control", ctrlCert, ctrlKey, x509.ExtKeyUsageClientAuth,
+		[]string{"foo"}, nil); err != nil {
+		return err
+	}
+
 	// relay X25519 keypair used to seal routing metadata to the relay
 	kp, err := api.GenerateRelayKeyPair()
 	if err != nil {
@@ -82,6 +80,42 @@ func run() error {
 		return err
 	}
 	return os.WriteFile(filepath.Join(outDir, "relay.pub"), kp.Public[:], 0o644)
+}
+
+// newCA generates a self signed CA and writes its certificate and key.
+func newCA(commonName, certFile, keyFile string) (*x509.Certificate, *ecdsa.PrivateKey, error) {
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, nil, err
+	}
+	serial, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+	if err != nil {
+		return nil, nil, err
+	}
+	tmpl := &x509.Certificate{
+		SerialNumber:          serial,
+		Subject:               pkix.Name{CommonName: commonName},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().AddDate(10, 0, 0),
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
+	if err != nil {
+		return nil, nil, err
+	}
+	cert, err := x509.ParseCertificate(der)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := writeCert(certFile, der); err != nil {
+		return nil, nil, err
+	}
+	if err := writeKey(keyFile, key); err != nil {
+		return nil, nil, err
+	}
+	return cert, key, nil
 }
 
 func writeLeaf(name string, caCert *x509.Certificate, caKey *ecdsa.PrivateKey, eku x509.ExtKeyUsage, dns []string, ips []net.IP) error {

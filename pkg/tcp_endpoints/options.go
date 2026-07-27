@@ -1,8 +1,12 @@
 package tcp_endpoints
 
+import "crypto/tls"
+
 // options configure how a RelayDialer or RelayListener talks to the relay.
 type options struct {
-	relayPub *[32]byte
+	relayPub    *[32]byte
+	controlAddr string
+	controlTLS  *tls.Config
 }
 
 // Option customises a RelayDialer or RelayListener.
@@ -13,6 +17,25 @@ type Option func(*options)
 // exactly as before. The relay still reads the metadata in order to route.
 func WithRelayKey(relayPub [32]byte) Option {
 	return func(o *options) { o.relayPub = &relayPub }
+}
+
+// WithRelayControlTLS sends the listener's persistent registration connection to the relay's mTLS
+// control endpoint at addr, using cfg. This encrypts and authenticates that connection, and lets the
+// relay refuse a server id the certificate does not cover.
+//
+// cfg authenticates the listener to the *relay* and is unrelated to any tls.Config used for the
+// end-to-end session with a client: those are different peers and should use different credentials.
+// The client dial and server callback hops are unaffected, so tunnel traffic is never nested inside
+// a second layer of TLS.
+//
+// This option applies to listeners only and is ignored by a RelayDialer, which never opens a
+// registration connection. The relay matches the registered server id against the certificate's
+// subject alternative names, so the id must be present there.
+func WithRelayControlTLS(addr string, cfg *tls.Config) Option {
+	return func(o *options) {
+		o.controlAddr = addr
+		o.controlTLS = cfg
+	}
 }
 
 func applyOptions(opts []Option) options {

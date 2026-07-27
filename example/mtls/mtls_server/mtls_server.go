@@ -62,7 +62,18 @@ func main() {
 
 	relayAddress := fmt.Sprintf("localhost:%d", utils.ServerPort)
 
-	listener, err := mtls_endpoint.ListenMTLS("tcp", utils.ExporterName, tlsConfig, relayAddress, mtls_endpoint.WithRelayKey(relayPub))
+	// Credentials for the relay, not for the client. tlsConfig above proves this server's identity
+	// to a connecting client; controlTLS proves to the relay that this process may register
+	// utils.ExporterName. They come from separate CAs on purpose.
+	controlTLS, err := utils.ExporterControlTLSConfig()
+	if err != nil {
+		log.Fatalf("relay control tls config: %v", err)
+	}
+	controlAddress := fmt.Sprintf("localhost:%d", utils.ControlPort)
+
+	listener, err := mtls_endpoint.ListenMTLS("tcp", utils.ExporterName, tlsConfig, relayAddress,
+		mtls_endpoint.WithRelayKey(relayPub),
+		mtls_endpoint.WithRelayControlTLS(controlAddress, controlTLS))
 	if err != nil {
 		log.Fatalf("listen failed: %v", err)
 	}

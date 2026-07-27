@@ -2,3 +2,8 @@
 .idea/
 VS
 bin/
+
+# Demo PKI and relay routing keys, generated locally by `go run ./example/utils/gencerts`.
+# Throwaway material for the examples: regenerated rather than committed, so that no private
+# key material lives in the repository.
+example/utils/certs/

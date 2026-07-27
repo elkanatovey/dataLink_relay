@@ -86,7 +86,7 @@ func NewRelayListener(relayURL string, opts ...Option) RelayListener {
 	ctx, cancel := context.WithCancelCause(context.Background())
 
 	listener := RelayListener{
-		manager:       newListenerManager(relayURL, o.relayPub),
+		manager:       newListenerManager(relayURL, o),
 		reqHandlingCh: make(chan connRequestResult, bufferSize),
 		reqErrCh:      make(chan error, 1),
 		ctx:           ctx,

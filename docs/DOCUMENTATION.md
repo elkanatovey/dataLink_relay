@@ -69,3 +69,33 @@ Usage:
 * Give the dialer/listener the relay's **public** key via the `WithRelayKey(pub)` option, e.g. `tcp_endpoints.DialTCP("tcp", server, relayIP, client, tcp_endpoints.WithRelayKey(pub))` or `mtls_endpoint.ListenMTLS(..., mtls_endpoint.WithRelayKey(pub))`. Both packages expose the option and it is the same type, so either spelling works.
 
 Without the option, routing metadata is sent in plaintext exactly as before. Sealing to a known static key needs no handshake and adds no round trips; it does **not** provide forward secrecy, so rotate the key to bound exposure.
+
+## mTLS on the registration connection
+A listening server holds one long-lived connection to the relay, over which the relay pushes connection requests. By default that connection is plain HTTP: the stream is readable and injectable by anyone on-path, and the relay cannot tell who registered a given server id.
+
+It can optionally be moved to an **mTLS control endpoint** on the relay. Only this connection is affected. The client dial and server callback hops get hijacked into the end-to-end encrypted tunnel, so putting TLS on them would nest encryption inside encryption and add a handshake to every dial.
+
+Relay side — serve the muxes on separate listeners:
+
+| Handler | Routes | Listener |
+|---|---|---|
+| `Relay.Mux` | all three | plaintext; the historical single-listener deployment |
+| `Relay.DataMux` | `/clientconn`, `/servercallback` | plaintext |
+| `Relay.ControlMux` | `/serverconn` | TLS with `tls.RequireAndVerifyClientCert` |
+
+Serving `DataMux` instead of `Mux` is what makes the control plane mandatory: registration is then not routable at all without a certificate. `ControlMux` additionally refuses any request that did not arrive over TLS with a verified peer certificate, so it fails closed if it is misconfigured onto a plaintext listener.
+
+Listener side — pass the option:
+
+```go
+listener, err := mtls_endpoint.ListenMTLS("tcp", "foo", tlsConfig, relayAddr,
+    mtls_endpoint.WithRelayControlTLS(controlAddr, controlTLS))
+```
+
+The relay checks that the server id being registered is covered by a SAN in the presented certificate, so a certificate cannot be used to claim someone else's id. Server ids therefore have to be valid subject alternative names when this option is used.
+
+The option applies to listeners only. A dialer never opens a registration connection, so passing it to `DialTCP` or `DialMTLS` has no effect.
+
+**Use a separate PKI for this.** The `tls.Config` passed to `Listen` authenticates the server to a *client*; the one passed to `WithRelayControlTLS` authenticates it to the *relay*. If both trust the same CA then every client certificate that CA issued is also a valid registration certificate, and any client can register as your server — the exact attack this is meant to prevent. The demo mints two CAs for that reason. Reusing a single leaf does not work in any case: a `serverAuth` certificate is rejected when presented as a client certificate.
+
+Without the option the registration connection stays plaintext, exactly as before.

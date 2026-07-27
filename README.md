@@ -11,6 +11,8 @@ datalink_relay is a library written in go for the purpose of allowing servers be
 
 **Note:** MTLS secures the data connection (step 6) end-to-end, so the relay only ever sees ciphertext. The control messages with the relay are plaintext by default, but the routing metadata (client/server IDs) can optionally be **sealed to the relay's public key** so on-path observers cannot see who is connecting to whom (the relay still reads it in order to route). See [`WithRelayKey`](docs/DOCUMENTATION.md).
 
+The server's long-lived registration connection to the relay can additionally be moved onto an **mTLS control endpoint**, which encrypts it and lets the relay verify that a server is entitled to the id it registers. See [`WithRelayControlTLS`](docs/DOCUMENTATION.md).
+
 ## Requirements
 Go 1.23 or newer.
 
