@@ -30,8 +30,24 @@ func hijackConn(w http.ResponseWriter) net.Conn {
 	}
 	w.WriteHeader(http.StatusOK) //should this be here?
 	// Hijack the connection
-	conn, _, _ := hj.Hijack()
-	return conn
+	conn, bufrw, err := hj.Hijack()
+	if err != nil {
+		return nil
+	}
+	// Hijack can hand back bytes the client has already sent, sitting unread in the server's read
+	// buffer. Reading straight from conn would silently drop them, so read through bufrw instead.
+	return &hijackedConn{Conn: conn, reader: bufrw.Reader}
+}
+
+// hijackedConn reads through the buffered reader returned by http.Hijacker so that data the HTTP
+// server had already read off the socket is delivered. Everything else is the raw connection.
+type hijackedConn struct {
+	net.Conn
+	reader io.Reader
+}
+
+func (c *hijackedConn) Read(p []byte) (int, error) {
+	return c.reader.Read(p)
 }
 
 // uniteConnections glues an importer connection with an exporter connection
