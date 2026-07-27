@@ -14,7 +14,7 @@ datalink_relay is a library written in go for the purpose of allowing servers be
 The server's long-lived registration connection to the relay can additionally be moved onto an **mTLS control endpoint**, which encrypts it and lets the relay verify that a server is entitled to the id it registers. See [`WithRelayControlTLS`](docs/DOCUMENTATION.md).
 
 ## Requirements
-Go 1.23 or newer.
+Go 1.25 or newer.
 
 ## Demo Usage:
 
