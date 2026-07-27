@@ -1,6 +1,7 @@
 package httputils
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -83,14 +84,16 @@ func Delete(url string, jsonData []byte, cl http.Client) ([]byte, error) {
 	return body, nil
 }
 
-type myConn struct {
+// tunnelConn is the connection handed back once a CONNECT has been accepted. Reads go through the
+// buffered reader that parsed the response, so any bytes it read ahead of the response are still
+// delivered to the caller. Everything else is the raw connection.
+type tunnelConn struct {
 	net.Conn
-	r *http.Response
+	reader io.Reader
 }
 
-func (a myConn) Close() error {
-	a.r.Body.Close()
-	return a.Conn.Close()
+func (c *tunnelConn) Read(p []byte) (int, error) {
+	return c.reader.Read(p)
 }
 
 // Connect is a convenience function to issue a CONNECT request
@@ -101,25 +104,34 @@ func Connect(address, url string, jsonData string) (net.Conn, error) {
 	}
 
 	log.Infof("Send Connect request to url: %v", url)
-	client := http.Client{Transport: &http.Transport{Dial: connDialer{c}.Dial}}
 	req, err := http.NewRequest(http.MethodConnect, url, bytes.NewBuffer([]byte(jsonData)))
 	if err != nil {
+		c.Close()
 		return nil, err
 	}
 
-	resp, err := client.Do(req)
+	// Write the request straight to the connection rather than going through an http.Transport. A
+	// Transport keeps ownership of the socket and reads it in the background, so tunnel bytes that
+	// arrive after the response can end up in its buffer where the caller can never see them.
+	if err := req.Write(c); err != nil {
+		log.Errorln(err)
+		c.Close()
+		return nil, err
+	}
 
+	br := bufio.NewReader(c)
+	resp, err := http.ReadResponse(br, req)
 	if err != nil {
 		log.Errorln(err)
+		c.Close()
 		return nil, err
 	}
-	mc := myConn{c, resp}
 	if resp.StatusCode != http.StatusOK {
+		c.Close()
 		return nil, fmt.Errorf("connect response code: %v", resp.StatusCode)
 	}
 
-	return mc, nil
-
+	return &tunnelConn{Conn: c, reader: br}, nil
 }
 
 func dial(addr string) (net.Conn, error) {
@@ -132,13 +144,4 @@ func dial(addr string) (net.Conn, error) {
 	log.Infof("Finish dial to address: %v\n", addr)
 
 	return c, err
-}
-
-type connDialer struct {
-	c net.Conn
-}
-
-// Dial (network , addr)fakes a connect to an existing connection
-func (cd connDialer) Dial(_, _ string) (net.Conn, error) {
-	return cd.c, nil
 }
