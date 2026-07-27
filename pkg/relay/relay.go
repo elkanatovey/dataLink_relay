@@ -162,6 +162,8 @@ func authorizeServerID(r *http.Request, serverID string) error {
 		return nil
 	}
 	if len(r.TLS.PeerCertificates) == 0 {
+		// Not reachable behind ControlMux, which already requires a certificate, but a relay serving
+		// the combined Mux over TLS without RequireAndVerifyClientCert would land here.
 		return errors.New("no client certificate presented")
 	}
 	if err := r.TLS.PeerCertificates[0].VerifyHostname(serverID); err != nil {

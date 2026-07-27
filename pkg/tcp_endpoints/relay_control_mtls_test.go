@@ -10,7 +10,9 @@ import (
 	"io"
 	"math/big"
 	"net"
+	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -193,6 +195,11 @@ func TestRelayControlMTLSRejectsForeignServerID(t *testing.T) {
 		listener.Close()
 		t.Fatal("expected registration to be refused for a server id the certificate does not cover")
 	}
+	// The certificate itself is trusted, so this has to be an authorisation refusal. Asserting on it
+	// keeps the test from passing because of an unrelated transport or handshake failure.
+	if !strings.Contains(err.Error(), http.StatusText(http.StatusForbidden)) {
+		t.Fatalf("expected a forbidden response, got: %v", err)
+	}
 }
 
 // TestRelayControlMuxRequiresCertificate guards against serving ControlMux on a plaintext listener.
@@ -201,7 +208,14 @@ func TestRelayControlMuxRequiresCertificate(t *testing.T) {
 	srv := httptest.NewServer(r.ControlMux)
 	defer srv.Close()
 
-	if _, err := ListenRelay("tcp", "plaintext-server", srv.Listener.Addr().String()); err == nil {
+	listener, err := ListenRelay("tcp", "plaintext-server", srv.Listener.Addr().String())
+	if err == nil {
+		listener.Close()
 		t.Fatal("expected plaintext registration against ControlMux to be refused")
+	}
+	// The route exists on this mux, so a refusal here means the certificate check rejected it rather
+	// than the request having gone somewhere else.
+	if !strings.Contains(err.Error(), http.StatusText(http.StatusForbidden)) {
+		t.Fatalf("expected a forbidden response, got: %v", err)
 	}
 }
