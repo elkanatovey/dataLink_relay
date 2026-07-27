@@ -27,6 +27,10 @@ func WithRelayKey(relayPub [32]byte) Option {
 // end-to-end session with a client: those are different peers and should use different credentials.
 // The client dial and server callback hops are unaffected, so tunnel traffic is never nested inside
 // a second layer of TLS.
+//
+// This option applies to listeners only and is ignored by a RelayDialer, which never opens a
+// registration connection. The relay matches the registered server id against the certificate's
+// subject alternative names, so the id must be present there.
 func WithRelayControlTLS(addr string, cfg *tls.Config) Option {
 	return func(o *options) {
 		o.controlAddr = addr

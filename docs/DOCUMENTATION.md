@@ -92,7 +92,9 @@ listener, err := mtls_endpoint.ListenMTLS("tcp", "foo", tlsConfig, relayAddr,
     mtls_endpoint.WithRelayControlTLS(controlAddr, controlTLS))
 ```
 
-The relay checks that the server id being registered is covered by a SAN in the presented certificate, so a certificate cannot be used to claim someone else's id.
+The relay checks that the server id being registered is covered by a SAN in the presented certificate, so a certificate cannot be used to claim someone else's id. Server ids therefore have to be valid subject alternative names when this option is used.
+
+The option applies to listeners only. A dialer never opens a registration connection, so passing it to `DialTCP` or `DialMTLS` has no effect.
 
 **Use a separate PKI for this.** The `tls.Config` passed to `Listen` authenticates the server to a *client*; the one passed to `WithRelayControlTLS` authenticates it to the *relay*. If both trust the same CA then every client certificate that CA issued is also a valid registration certificate, and any client can register as your server — the exact attack this is meant to prevent. The demo mints two CAs for that reason. Reusing a single leaf does not work in any case: a `serverAuth` certificate is rejected when presented as a client certificate.
 
