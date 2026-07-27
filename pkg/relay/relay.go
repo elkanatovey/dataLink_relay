@@ -28,9 +28,17 @@ const callbackTimeout = 30 * time.Second
 
 // Relay contains Data for running relay code
 type Relay struct {
-	Data   StateManager
-	Mux    http.Handler
-	logger *logrus.Entry
+	Data StateManager
+	// Mux serves all three routes over a single plaintext listener. This is the simplest deployment
+	// and the historical behaviour.
+	Mux http.Handler
+	// DataMux serves only the hijacked client dial and server callback routes. Pair it with
+	// ControlMux to keep server registration off the plaintext listener entirely.
+	DataMux http.Handler
+	// ControlMux serves only server registration and requires a verified client certificate, so it
+	// must be given to a http.Server configured with TLS and tls.RequireAndVerifyClientCert.
+	ControlMux http.Handler
+	logger     *logrus.Entry
 }
 
 // StateManager represents the relays internal state with respect to all listeningServers and connectingClients
@@ -94,11 +102,12 @@ func NewRelay(routingKeys ...*api.RelayKeyPair) *Relay {
 	if len(routingKeys) > 0 {
 		data.SetRoutingKeys(routingKeys)
 	}
-	mux := registerHandlers(data)
 	return &Relay{
-		Data:   data,
-		Mux:    mux,
-		logger: logrus.WithField("component", "relay"),
+		Data:       data,
+		Mux:        registerHandlers(data),
+		DataMux:    registerDataHandlers(data),
+		ControlMux: registerControlHandlers(data),
+		logger:     logrus.WithField("component", "relay"),
 	}
 }
 
@@ -115,6 +124,50 @@ func registerHandlers(relayState *RelayData) *http.ServeMux {
 	mux.HandleFunc(api.Dial, HandleClientConnection(relayState))           //call
 	mux.HandleFunc(api.Accept, HandleServerCallBackConnection(relayState)) //accept
 	return mux
+}
+
+// registerDataHandlers serves only the routes that get hijacked into the data tunnel. They carry
+// end-to-end encrypted traffic, so wrapping them in TLS would only nest encryption.
+func registerDataHandlers(relayState *RelayData) *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc(api.Dial, HandleClientConnection(relayState))           //call
+	mux.HandleFunc(api.Accept, HandleServerCallBackConnection(relayState)) //accept
+	return mux
+}
+
+// registerControlHandlers serves only server registration, behind a client certificate check.
+func registerControlHandlers(relayState *RelayData) *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc(api.Listen, requireClientCert(HandleServerLongTermConnection(relayState)))
+	return mux
+}
+
+// requireClientCert rejects requests that did not arrive over TLS with a verified client
+// certificate. It guards against a ControlMux accidentally being served on a plaintext listener.
+func requireClientCert(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
+			http.Error(w, "client certificate required", http.StatusForbidden)
+			return
+		}
+		next(w, r)
+	}
+}
+
+// authorizeServerID checks that a control connection's client certificate authorises registering
+// serverID. On a plaintext connection there is no certificate to check and the legacy unauthenticated
+// behaviour is preserved.
+func authorizeServerID(r *http.Request, serverID string) error {
+	if r.TLS == nil {
+		return nil
+	}
+	if len(r.TLS.PeerCertificates) == 0 {
+		return errors.New("no client certificate presented")
+	}
+	if err := r.TLS.PeerCertificates[0].VerifyHostname(serverID); err != nil {
+		return fmt.Errorf("certificate does not authorise server id %q: %w", serverID, err)
+	}
+	return nil
 }
 
 // HandleServerLongTermConnection maintains a persistent connection on behalf of an ListeningServer and passes connection
@@ -151,6 +204,12 @@ func HandleServerLongTermConnection(relayState *RelayData) http.HandlerFunc {
 		if exporterID == "" {
 			http.Error(w, "Please specify an exporter name!", http.StatusInternalServerError)
 			relayState.logger.Errorln("exporter name not specified")
+			return
+		}
+
+		if err := authorizeServerID(r, exporterID); err != nil {
+			http.Error(w, "not authorised to register this server id", http.StatusForbidden)
+			relayState.logger.Errorln(err)
 			return
 		}
 
