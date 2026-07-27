@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/elkanatovey/dataLink_relay/example/utils"
 	"github.com/elkanatovey/dataLink_relay/pkg/mtls_endpoint"
-	"github.com/elkanatovey/dataLink_relay/pkg/tcp_endpoints"
 	"github.com/elkanatovey/dataLink_relay/pkg/utils/logutils"
 	log "github.com/sirupsen/logrus"
 	"os"
@@ -26,7 +25,7 @@ func main() {
 
 	relayAddress := fmt.Sprintf("localhost:%d", utils.ServerPort)
 
-	conn, err := mtls_endpoint.DialMTLS("tcp", utils.ExporterName, tlsConfig, relayAddress, utils.ImporterName, tcp_endpoints.WithRelayKey(relayPub))
+	conn, err := mtls_endpoint.DialMTLS("tcp", utils.ExporterName, tlsConfig, relayAddress, utils.ImporterName, mtls_endpoint.WithRelayKey(relayPub))
 	if err != nil {
 		fmt.Println("Error connecting to tcp_endpoints:", err)
 		os.Exit(1)

@@ -12,7 +12,7 @@ import (
 type RelayMTLSDialer struct {
 	relayIP  string
 	clientID string
-	opts     []tcp_endpoints.Option
+	opts     []Option
 }
 
 func (r RelayMTLSDialer) Dial(network, address string, config *tls.Config) (net.Conn, error) {
@@ -22,14 +22,19 @@ func (r RelayMTLSDialer) Dial(network, address string, config *tls.Config) (net.
 	return dial(context.Background(), r.relayIP, r.clientID, address, config, r.opts...)
 }
 
-// DialMTLS dials the given network address via the given relay
-func DialMTLS(network, address string, config *tls.Config, relayIP string, clientName string, opts ...tcp_endpoints.Option) (net.Conn, error) {
-	dialer := RelayMTLSDialer{relayIP: relayIP, clientID: clientName, opts: opts}
-	return dialer.Dial(network, address, config)
-
+// NewRelayMTLSDialer creates a RelayMTLSDialer that maintains the tls.Dial api. To dial call
+// RelayMTLSDialer.Dial. relayIP is the address of the relay via which we dial, clientName is the id
+// this client presents to the relay
+func NewRelayMTLSDialer(relayIP string, clientName string, opts ...Option) RelayMTLSDialer {
+	return RelayMTLSDialer{relayIP: relayIP, clientID: clientName, opts: opts}
 }
 
-func dial(ctx context.Context, relayIP string, clientName string, serverName string, config *tls.Config, opts ...tcp_endpoints.Option) (net.Conn, error) {
+// DialMTLS dials the given network address via the given relay
+func DialMTLS(network, address string, config *tls.Config, relayIP string, clientName string, opts ...Option) (net.Conn, error) {
+	return NewRelayMTLSDialer(relayIP, clientName, opts...).Dial(network, address, config)
+}
+
+func dial(ctx context.Context, relayIP string, clientName string, serverName string, config *tls.Config, opts ...Option) (net.Conn, error) {
 	rawConn, err := tcp_endpoints.DialTCP("tcp", serverName, relayIP, clientName, opts...)
 	if err != nil {
 		return nil, err

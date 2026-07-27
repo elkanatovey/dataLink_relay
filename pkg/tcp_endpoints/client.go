@@ -49,8 +49,15 @@ func (r RelayDialer) Dial(network, address string) (net.Conn, error) {
 	return nil, fmt.Errorf("connect Request Failed")
 }
 
+// NewRelayDialer creates a RelayDialer that implements the net.Dialer api. To dial call
+// RelayDialer.Dial. relayIP is the address of the relay via which we dial, clientName is the id
+// this client presents to the relay
+func NewRelayDialer(relayIP string, clientName string, opts ...Option) RelayDialer {
+	o := applyOptions(opts)
+	return RelayDialer{relayIP: relayIP, clientID: clientName, relayPub: o.relayPub}
+}
+
 // DialTCP dials a server via the relay at the given ip via RelayDialer.Dial
 func DialTCP(network, address string, relayIP string, clientName string, opts ...Option) (net.Conn, error) {
-	o := applyOptions(opts)
-	return RelayDialer{relayIP: relayIP, clientID: clientName, relayPub: o.relayPub}.Dial(network, address)
+	return NewRelayDialer(relayIP, clientName, opts...).Dial(network, address)
 }

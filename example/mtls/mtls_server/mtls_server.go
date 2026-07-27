@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/elkanatovey/dataLink_relay/example/utils"
 	"github.com/elkanatovey/dataLink_relay/pkg/mtls_endpoint"
-	"github.com/elkanatovey/dataLink_relay/pkg/tcp_endpoints"
 	"github.com/elkanatovey/dataLink_relay/pkg/utils/logutils"
 	log "github.com/sirupsen/logrus"
 	"net"
@@ -63,7 +62,7 @@ func main() {
 
 	relayAddress := fmt.Sprintf("localhost:%d", utils.ServerPort)
 
-	listener, err := mtls_endpoint.ListenMTLS("tcp", utils.ExporterName, tlsConfig, relayAddress, tcp_endpoints.WithRelayKey(relayPub))
+	listener, err := mtls_endpoint.ListenMTLS("tcp", utils.ExporterName, tlsConfig, relayAddress, mtls_endpoint.WithRelayKey(relayPub))
 	if err != nil {
 		log.Fatalf("listen failed: %v", err)
 	}

@@ -20,15 +20,16 @@ The library exports the net Listener and Dialer interfaces for convenience of us
 
 | Method                                                                                                | Description                                                             |
 |-------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------|
-| `tcp_endpoints.DialTCP(network, address string, relayIP string, clientName string) (net.Conn, error)` | dials server listening on relay via args                                |
+| `tcp_endpoints.DialTCP(network, address string, relayIP string, clientName string, opts ...Option) (net.Conn, error)` | dials server listening on relay via args                                |
+| `tcp_endpoints.NewRelayDialer(relayIP string, clientName string, opts ...Option) RelayDialer`         | create `RelayDialer`. This implements the `net.Dialer` api               |
 | `RelayDialer.Dial(network, address string) (net.Conn, error)`                                         | dials server listening on relay. Dialer initialised with server address |
 
 #### Server connection
 
 | Method                                                                                      | Description                                                                                                       |
 |---------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------|
-| `tcp_endpoints.ListenRelay(network, address string, relayURL string) (net.Listener, error)` | listen on relay via args                                                                                          |
-| `tcp_endpoints.NewRelayListener(relayURL string) RelayListener`                             | create `RelayListener`. This implements the ``Listener interface                                                  |
+| `tcp_endpoints.ListenRelay(network, address string, relayURL string, opts ...Option) (net.Listener, error)` | listen on relay via args                                                                                          |
+| `tcp_endpoints.NewRelayListener(relayURL string, opts ...Option) RelayListener`             | create `RelayListener`. This implements the ``Listener interface                                                  |
 | `tcp_endpoints.RelayListener.Listen(network, address string) (net.Listener, error)`         | Listen on `RelayListener`. The returned listener listens on the relay and implements the `net.Listener` interface |
 
 #### Relay operations
@@ -40,14 +41,16 @@ The relay is run by calling the `net.http` library's `ListenAndServe` methods
 
 | Method                                                                                                                       | Description                                                             |
 |------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------|
-| `mtls_endpoint.DialMTLS(network, address string, , config *tls.Config, relayIP string, clientName string) (net.Conn, error)` | dials server listening on relay via args                                |
+| `mtls_endpoint.DialMTLS(network, address string, config *tls.Config, relayIP string, clientName string, opts ...Option) (net.Conn, error)` | dials server listening on relay via args                                |
+| `mtls_endpoint.NewRelayMTLSDialer(relayIP string, clientName string, opts ...Option) RelayMTLSDialer`                        | create `RelayMTLSDialer`. This maintains the `tls.Dial` api              |
 | `RelayMTLSDialer.Dial(network, address string, config *tls.Config) (net.Conn, error)`                                        | dials server listening on relay. Dialer initialised with server address |
 
 #### Server connection
 
 | Method                                                                                                         | Description                                                                                                                                                                      |
 |----------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `mtls_endpoint.ListenMTLS(network, address string, config *tls.Config, relayURL string) (net.Listener, error)` | listen on relay via args                                                                                                                                                         |
+| `mtls_endpoint.ListenMTLS(network, address string, config *tls.Config, relayURL string, opts ...Option) (net.Listener, error)` | listen on relay via args                                                                                                                                                         |
+| `mtls_endpoint.NewMTLSRelayListener(relayURL string, opts ...Option) MTLSRelayListener`                        | create `MTLSRelayListener`. This maintains the `tls.Listener` api                                                                                                                |
 | `mtls_endpoint.MTLSRelayListener.Listen(network, address string, config *tls.Config) (net.Listener, error)`    | Listen on `MTLSRelayListener`. The returned listener listens on the relay and implements the `net.Listener` interface. `MTLSRelayListener`must be initialised with the relay url |
 
 
@@ -63,6 +66,6 @@ The routing metadata carried in the control messages — the client and server I
 
 Usage:
 * Start the relay with one or more keys: `relay.NewRelay(keyPair)`. Rotate at runtime with `Relay.SetRoutingKeys(...)`; the relay trial-decrypts across its keyring, so rotation does not drop in-flight clients.
-* Give the dialer/listener the relay's **public** key via the `tcp_endpoints.WithRelayKey(pub)` option, e.g. `tcp_endpoints.DialTCP("tcp", server, relayIP, client, tcp_endpoints.WithRelayKey(pub))` or `mtls_endpoint.ListenMTLS(..., tcp_endpoints.WithRelayKey(pub))`.
+* Give the dialer/listener the relay's **public** key via the `WithRelayKey(pub)` option, e.g. `tcp_endpoints.DialTCP("tcp", server, relayIP, client, tcp_endpoints.WithRelayKey(pub))` or `mtls_endpoint.ListenMTLS(..., mtls_endpoint.WithRelayKey(pub))`. Both packages expose the option and it is the same type, so either spelling works.
 
 Without the option, routing metadata is sent in plaintext exactly as before. Sealing to a known static key needs no handshake and adds no round trips; it does **not** provide forward secrecy, so rotate the key to bound exposure.
