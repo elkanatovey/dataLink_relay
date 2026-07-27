@@ -13,7 +13,7 @@ jobs:
     - name: set up go 1.x
       uses: actions/setup-go@v5
       with:
-        go-version: '1.23'
+        go-version: '1.26'
     - name: checkout
       uses: actions/checkout@v4
     - name: check gofmt
@@ -31,7 +31,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go: ['1.23']  
+        # 1.25 is the floor declared in go.mod, 1.26 is the current release.
+        go: ['1.25', '1.26']
     steps:
     - name: set up go 1.x
       uses: actions/setup-go@v5

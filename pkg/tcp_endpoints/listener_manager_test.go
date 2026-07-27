@@ -45,21 +45,18 @@ func TestListenerManager_listenInternal(t *testing.T) {
 	//advertise
 	err := exportingServer.listenInternal(ctx, handlingChennel, errChan, exporterName)
 	if err != nil {
-		t.Errorf(err.Error())
-		t.Errorf("connreq1 fail")
+		t.Errorf("connreq1 fail: %v", err)
 	}
 	time.Sleep(1000 * time.Millisecond)
 
 	// notify exporter on relay end
 	err = r.Data.NotifyListeningServer(connReq1.ServerID, relay.InitClientData(connReq1))
 	if err != nil {
-		t.Errorf(err.Error())
-		t.Errorf("connreq1 fail")
+		t.Errorf("connreq1 fail: %v", err)
 	}
 	err = r.Data.NotifyListeningServer(connReq2.ServerID, relay.InitClientData(connReq2))
 	if err != nil {
-		t.Errorf(err.Error())
-		t.Errorf("connreq2 fail")
+		t.Errorf("connreq2 fail: %v", err)
 	}
 
 	a := <-handlingChennel
@@ -75,13 +72,11 @@ func TestListenerManager_listenInternal(t *testing.T) {
 
 	c := <-handlingChennel
 	if !errors.Is(c.error, context.Canceled) {
-		t.Errorf(c.Error())
-		t.Errorf("should be %s!", io.EOF)
+		t.Errorf("should be %s, got: %v", io.EOF, c.error)
 	}
 	//var ee error
 	err = <-errChan
 	if !errors.Is(err, context.Canceled) {
-		t.Errorf(err.Error())
-		t.Errorf("should be %s!", io.EOF)
+		t.Errorf("should be %s, got: %v", io.EOF, err)
 	}
 }
