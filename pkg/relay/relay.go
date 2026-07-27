@@ -65,6 +65,17 @@ func (d *RelayData) SetRoutingKeys(ring []*api.RelayKeyPair) {
 	d.routingKeys.Store(&ring)
 }
 
+// maxRoutingBody caps how much of a routing message the relay will buffer. Routing messages are a
+// small JSON object, sealed or not, so this is generous while keeping an unauthenticated request
+// from exhausting relay memory.
+const maxRoutingBody = 64 << 10
+
+// readRoutingBody reads a routing message off the request, refusing bodies larger than
+// maxRoutingBody.
+func readRoutingBody(w http.ResponseWriter, r *http.Request) ([]byte, error) {
+	return io.ReadAll(http.MaxBytesReader(w, r.Body, maxRoutingBody))
+}
+
 // decodeRouting opens a sealed routing message using the relay's keyring, falling back to plaintext
 // JSON when no keyring is configured or the body is not sealed.
 func (d *RelayData) decodeRouting(body []byte, v any) error {
@@ -122,7 +133,7 @@ func HandleServerLongTermConnection(relayState *RelayData) http.HandlerFunc {
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("Connection", "keep-alive")
 
-		body, err := io.ReadAll(r.Body)
+		body, err := readRoutingBody(w, r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			relayState.logger.Errorln(err)
@@ -187,7 +198,7 @@ func HandleServerLongTermConnection(relayState *RelayData) http.HandlerFunc {
 // from a callback connection with which to connect an ConnectingClient connection
 func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		body, err := io.ReadAll(r.Body)
+		body, err := readRoutingBody(w, r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			relayState.logger.Errorln(err)
@@ -260,7 +271,7 @@ func HandleClientConnection(relayState *RelayData) http.HandlerFunc {
 // and passes the connection to the waiting client handler for gluing
 func HandleServerCallBackConnection(relayState *RelayData) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		body, err := io.ReadAll(r.Body)
+		body, err := readRoutingBody(w, r)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			relayState.logger.Errorln(err)
