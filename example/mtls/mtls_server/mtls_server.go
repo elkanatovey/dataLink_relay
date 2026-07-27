@@ -55,9 +55,14 @@ func main() {
 		log.Fatalf("tls config: %v", err)
 	}
 
+	relayPub, err := utils.LoadRelayPublicKey()
+	if err != nil {
+		log.Fatalf("relay key: %v", err)
+	}
+
 	relayAddress := fmt.Sprintf("localhost:%d", utils.ServerPort)
 
-	listener, err := mtls_endpoint.ListenMTLS("tcp", utils.ExporterName, tlsConfig, relayAddress)
+	listener, err := mtls_endpoint.ListenMTLS("tcp", utils.ExporterName, tlsConfig, relayAddress, mtls_endpoint.WithRelayKey(relayPub))
 	if err != nil {
 		log.Fatalf("listen failed: %v", err)
 	}

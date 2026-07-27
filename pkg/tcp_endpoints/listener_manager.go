@@ -3,7 +3,6 @@ package tcp_endpoints
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/elkanatovey/dataLink_relay/pkg/api"
@@ -20,15 +19,17 @@ type listenerManager struct {
 	ServerID         string
 	maxBufferSize    int
 	listeningAddress ListenerAddress
+	relayPub         *[32]byte
 	logger           *logrus.Entry
 }
 
 // newListenerManager creates a new listenerManager
-func newListenerManager(relayAddr string) *listenerManager {
+func newListenerManager(relayAddr string, relayPub *[32]byte) *listenerManager {
 	s := &listenerManager{
 		RelayIPPort:   relayAddr,
 		Connection:    &http.Client{},
 		maxBufferSize: 1 << 16,
+		relayPub:      relayPub,
 		logger:        logrus.WithField("component", "exportingserver"),
 	}
 
@@ -102,8 +103,10 @@ func (s *listenerManager) listenRequest(ctx context.Context, address string) (*h
 
 // createListenRequest builds the request to open the listen connection for the server
 func (s *listenerManager) createListenRequest(ctx context.Context, address string) (*http.Request, error) {
-	reqBody := api.ListenRequest{ServerID: address}
-	reqBodyBytes, _ := json.Marshal(reqBody)
+	reqBodyBytes, err := api.EncodeRouting(api.ListenRequest{ServerID: address}, s.relayPub)
+	if err != nil {
+		return nil, err
+	}
 
 	req, err := http.NewRequest("POST", api.TCP+s.RelayIPPort+api.Listen, bytes.NewReader(reqBodyBytes)) //@todo should we cancel context in case of error?
 	if err != nil {
@@ -122,7 +125,7 @@ func (s *listenerManager) internalTCPCallbackReq(importerName string, address st
 	s.logger.Infof("Starting TCP callback to importer id %v via relay ip %v", importerName, s.RelayIPPort)
 	url := api.TCP + s.RelayIPPort + api.Accept
 
-	jsonData, err := json.Marshal(api.ConnectionAccept{ClientID: importerName, ServerID: address})
+	jsonData, err := api.EncodeRouting(api.ConnectionAccept{ClientID: importerName, ServerID: address}, s.relayPub)
 	if err != nil {
 		s.logger.Errorln(err)
 		return nil, err

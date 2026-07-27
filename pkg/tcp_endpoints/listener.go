@@ -81,11 +81,12 @@ func (r RelayListener) Listen(network, address string) (net.Listener, error) {
 
 // NewRelayListener creates a RelayListener that implements the net.Listener api. To run the RelayListener call
 // RelayListener.Listen. relayURL is the address of the relay via which we listen
-func NewRelayListener(relayURL string) RelayListener {
+func NewRelayListener(relayURL string, opts ...Option) RelayListener {
+	o := applyOptions(opts)
 	ctx, cancel := context.WithCancelCause(context.Background())
 
 	listener := RelayListener{
-		manager:       newListenerManager(relayURL),
+		manager:       newListenerManager(relayURL, o.relayPub),
 		reqHandlingCh: make(chan connRequestResult, bufferSize),
 		reqErrCh:      make(chan error, 1),
 		ctx:           ctx,
@@ -98,8 +99,8 @@ func NewRelayListener(relayURL string) RelayListener {
 // address is the address listened on, relayURL is the address of the relay via which we listen,
 // currently only tcp is supported
 // example usage `tcp_endpoints.listen_relay("tcp", "myserver.com:4444" ,"golang.org:8080")`
-func ListenRelay(network, address string, relayURL string) (net.Listener, error) {
-	l := NewRelayListener(relayURL)
+func ListenRelay(network, address string, relayURL string, opts ...Option) (net.Listener, error) {
+	l := NewRelayListener(relayURL, opts...)
 
 	return l.Listen(network, address)
 }

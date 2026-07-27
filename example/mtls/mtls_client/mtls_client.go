@@ -18,9 +18,14 @@ func main() {
 		log.Fatalf("tls config: %v", err)
 	}
 
+	relayPub, err := utils.LoadRelayPublicKey()
+	if err != nil {
+		log.Fatalf("relay key: %v", err)
+	}
+
 	relayAddress := fmt.Sprintf("localhost:%d", utils.ServerPort)
 
-	conn, err := mtls_endpoint.DialMTLS("tcp", utils.ExporterName, tlsConfig, relayAddress, utils.ImporterName)
+	conn, err := mtls_endpoint.DialMTLS("tcp", utils.ExporterName, tlsConfig, relayAddress, utils.ImporterName, mtls_endpoint.WithRelayKey(relayPub))
 	if err != nil {
 		fmt.Println("Error connecting to tcp_endpoints:", err)
 		os.Exit(1)

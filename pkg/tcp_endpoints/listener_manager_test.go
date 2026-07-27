@@ -35,7 +35,7 @@ func TestListenerManager_listenInternal(t *testing.T) {
 	r := relay.NewRelay()
 	relayServer = httptest.NewServer(r.Mux)
 
-	exportingServer := newListenerManager(relayServer.Listener.Addr().String())
+	exportingServer := newListenerManager(relayServer.Listener.Addr().String(), nil)
 
 	// channel to receive connrequests
 	handlingChennel := make(chan connRequestResult, 100)
