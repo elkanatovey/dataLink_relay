@@ -3,6 +3,7 @@ package tcp_endpoints
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"github.com/elkanatovey/dataLink_relay/pkg/api"
@@ -20,20 +21,42 @@ type listenerManager struct {
 	maxBufferSize    int
 	listeningAddress ListenerAddress
 	relayPub         *[32]byte
+	controlAddr      string // relay mTLS control endpoint, empty when registration is plaintext
+	controlTLS       *tls.Config
 	logger           *logrus.Entry
 }
 
 // newListenerManager creates a new listenerManager
-func newListenerManager(relayAddr string, relayPub *[32]byte) *listenerManager {
+func newListenerManager(relayAddr string, o options) *listenerManager {
 	s := &listenerManager{
 		RelayIPPort:   relayAddr,
 		Connection:    &http.Client{},
 		maxBufferSize: 1 << 16,
-		relayPub:      relayPub,
+		relayPub:      o.relayPub,
 		logger:        logrus.WithField("component", "exportingserver"),
 	}
 
+	if o.controlTLS != nil {
+		s.controlAddr = o.controlAddr
+		s.controlTLS = o.controlTLS
+		s.Connection = &http.Client{Transport: &http.Transport{
+			TLSClientConfig: o.controlTLS,
+			// The registration connection is a long lived event stream. Pin HTTP/1.1: a non-nil empty
+			// map disables HTTP/2, whose transport rejects the hop-by-hop headers set below.
+			TLSNextProto: map[string]func(string, *tls.Conn) http.RoundTripper{},
+		}}
+	}
+
 	return s
+}
+
+// controlEndpoint returns the scheme and address the registration connection is made to. It is the
+// relay's mTLS control endpoint when one is configured, and the plaintext relay otherwise.
+func (s *listenerManager) controlEndpoint() (string, string) {
+	if s.controlTLS != nil {
+		return api.MTLS, s.controlAddr
+	}
+	return api.TCP, s.RelayIPPort
 }
 
 // listenInternal maintains the persistent connection through which clients send connection requests,
@@ -108,7 +131,9 @@ func (s *listenerManager) createListenRequest(ctx context.Context, address strin
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", api.TCP+s.RelayIPPort+api.Listen, bytes.NewReader(reqBodyBytes)) //@todo should we cancel context in case of error?
+	scheme, addr := s.controlEndpoint()
+
+	req, err := http.NewRequest("POST", scheme+addr+api.Listen, bytes.NewReader(reqBodyBytes)) //@todo should we cancel context in case of error?
 	if err != nil {
 		return nil, err
 	}
