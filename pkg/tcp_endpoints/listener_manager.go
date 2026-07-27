@@ -41,8 +41,10 @@ func newListenerManager(relayAddr string, o options) *listenerManager {
 		s.controlTLS = o.controlTLS
 		s.Connection = &http.Client{Transport: &http.Transport{
 			TLSClientConfig: o.controlTLS,
-			// The registration connection is a long lived event stream. Pin HTTP/1.1: a non-nil empty
-			// map disables HTTP/2, whose transport rejects the hop-by-hop headers set below.
+			// The registration connection is a long lived event stream that sets hop-by-hop
+			// headers, which the HTTP/2 transport rejects. Setting TLSClientConfig already makes
+			// net/http skip HTTP/2, but pin it explicitly so enabling ForceAttemptHTTP2 later
+			// cannot silently break registration.
 			TLSNextProto: map[string]func(string, *tls.Conn) http.RoundTripper{},
 		}}
 	}
